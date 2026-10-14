@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сквош · сетка групповых игр</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#181b22; --panel2:#1f232c; --line:#2b303a;
+    --text:#e8eaf0; --muted:#9aa2b1; --accent:#38e07b; --accent2:#4c8dff;
+    --danger:#ff6b6b; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:20px 16px 64px}
+  header{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+  h1{font-size:22px; margin:0; letter-spacing:.2px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:18px}
+  .sub{color:var(--muted); font-size:13px; margin:0 0 20px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:16px}
+  .card h2{font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 12px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+  input,select{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    border-radius:10px; padding:10px 12px; font-size:15px; outline:none; width:100%;
+  }
+  input:focus,select:focus{border-color:var(--accent2)}
+  .field{flex:1 1 200px; min-width:140px}
+  .field.narrow{flex:0 1 120px}
+  button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:10px 16px; font-size:15px; cursor:pointer;
+    transition:.15s;
+  }
+  button:hover{border-color:var(--muted)}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#08130c; font-weight:600}
+  button.primary:hover{filter:brightness(1.08)}
+  button.ghost{background:transparent}
+  button.mini{padding:6px 10px; font-size:13px; border-radius:8px}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+  .chip{
+    display:flex; align-items:center; gap:8px; background:var(--panel2);
+    border:1px solid var(--line); border-radius:999px; padding:6px 8px 6px 14px; font-size:14px;
+  }
+  .chip b{font-weight:600}
+  .chip button{background:none;border:none;color:var(--muted);padding:2px 4px;font-size:16px;line-height:1;cursor:pointer}
+  .chip button:hover{color:var(--danger)}
+  .empty{color:var(--muted); font-size:14px}
+  .round{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:14px; overflow:hidden}
+  .round > header{display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--panel2); margin:0; gap:10px}
+  .round > header h3{margin:0; font-size:15px}
+  .rest{color:var(--muted); font-size:12px}
+  .court{padding:12px 16px; border-top:1px solid var(--line)}
+  .court-title{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px}
+  .game{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px}
+  .team{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-weight:600}
+  .team.win{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
+  .vs{color:var(--muted); font-size:12px; font-weight:700}
+  .score{display:flex; gap:6px; justify-content:center; margin-top:8px}
+  .score input{width:56px; text-align:center; padding:6px}
+  table{width:100%; border-collapse:collapse; font-size:14px}
+  th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line)}
+  th{color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.05em}
+  td.num,th.num{text-align:center; width:56px}
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px}
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--accent); color:#08130c; font-weight:600; padding:10px 18px;
+    border-radius:999px; opacity:0; transition:.25s; pointer-events:none; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%)}
+  @media print{
+    body{background:#fff; color:#000}
+    .card,.round,.team{background:#fff; border-color:#ccc}
+    .round>header{background:#eee}
+    .no-print{display:none!important}
+    .court,.team{color:#000}
+  }
+  @media (max-width:560px){ .game{grid-template-columns:1fr} .vs{text-align:center} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🎾</div>
+    <h1>Сквош · сетка групповых игр</h1>
+  </header>
+  <p class="sub">Одиночные матчи 1 на 1, как на турнирах: 2 игрока на корт, до 3 кортов одновременно. Сетка сама чередует соперников и отдых. До 12 игроков.</p>
+
+  <section class="card no-print">
+    <h2>Игроки</h2>
+    <div class="row">
+      <div class="field">
+        <label for="name">Имя игрока</label>
+        <input id="name" placeholder="Например, Анна" autocomplete="off" maxlength="24">
+      </div>
+      <button class="primary" id="addBtn">Добавить</button>
+      <button class="ghost" id="demoBtn">Пример (12)</button>
+      <button class="ghost" id="clearBtn">Очистить</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card no-print">
+    <h2>Настройки</h2>
+    <div class="row">
+      <div class="field narrow">
+        <label for="courts">Кортов</label>
+        <select id="courts">
+          <option>1</option><option selected>2</option><option>3</option>
+        </select>
+      </div>
+      <div class="field narrow">
+        <label for="rounds">Раундов</label>
+        <select id="rounds">
+          <option>3</option><option>5</option><option selected>7</option>
+          <option>9</option><option>11</option><option>13</option>
+        </select>
+      </div>
+      <button class="primary" id="genBtn">Построить сетку</button>
+      <button class="ghost" id="copyBtn">Скопировать</button>
+      <button class="ghost" id="printBtn">Печать</button>
+    </div>
+    <p class="empty" id="hint" style="margin:12px 0 0"></p>
+  </section>
+
+  <div id="schedule"></div>
+
+  <section class="card" id="standingsCard" hidden>
+    <h2>Таблица</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Игрок</th>
+          <th class="num">И</th><th class="num">В</th><th class="num">П</th><th class="num">Очки</th>
+        </tr></thead>
+        <tbody id="standings"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MAX_PLAYERS = 12, MAX_COURTS = 3;
+const LS = 'squash-grid-v1';
+const state = { players: [], courts: 2, rounds: 7, schedule: [], scores: {} };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const key = (a,b) => a < b ? a+'|'+b : b+'|'+a;
+
+/* ---------- состояние ---------- */
+function save(){
+  try{ localStorage.setItem(LS, JSON.stringify({
+    players: state.players, courts: state.courts, rounds: state.rounds,
+    schedule: state.schedule, scores: state.scores
+  })); }catch(e){}
+}
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(LS) || '{}');
+    if(Array.isArray(d.players)) state.players = d.players.slice(0, MAX_PLAYERS);
+    if(d.courts) state.courts = d.courts;
+    if(d.rounds) state.rounds = d.rounds;
+    if(Array.isArray(d.schedule)) state.schedule = d.schedule;
+    if(d.scores) state.scores = d.scores;
+  }catch(e){}
+}
+
+/* ---------- генератор сетки (одиночные матчи, 2 игрока на корт) ---------- */
+function buildSchedule(players, courts, rounds){
+  const n = players.length;
+  // сколько игроков задействовано за раунд: по 2 на корт, чётное число
+  const maxPlaying = Math.min(n, courts * 2);
+  const playing = 2 * Math.floor(maxPlaying / 2);
+  if(playing < 2) return [];
+
+  const playCount = {}, oppCount = {};
+  players.forEach((_,i) => playCount[i] = 0);
+
+  const out = [];
+  for(let r = 0; r < rounds; r++){
+    const sitCount = n - playing;
+
+    // отдыхают те, кто сыграл больше всех
+    const order = players.map((_,i)=>i)
+      .sort((a,b)=> playCount[b] - playCount[a] || Math.random() - .5);
+    const playingIdx = order.slice(sitCount);
+    const resting = order.slice(0, sitCount);
+
+    // жеребьёвка: соперники с наименьшим числом прошлых встреч
+    const allPairs = [];
+    for(let i=0;i<playingIdx.length;i++) for(let j=i+1;j<playingIdx.length;j++)
+      allPairs.push({ a:playingIdx[i], b:playingIdx[j],
+        c:(oppCount[key(playingIdx[i],playingIdx[j])]||0)*100 + Math.random() });
+    allPairs.sort((x,y)=> x.c - y.c);
+
+    const used = new Set(), matches = [];
+    for(const p of allPairs){
+      if(used.has(p.a) || used.has(p.b)) continue;
+      used.add(p.a); used.add(p.b);
+      matches.push([p.a, p.b]);
+      if(matches.length === playing/2) break;
+    }
+
+    // счётчики
+    playingIdx.forEach(i => playCount[i]++);
+    matches.forEach(([a,b]) => { const k = key(a,b); oppCount[k] = (oppCount[k]||0)+1; });
+
+    out.push({ courts: matches, resting });
+  }
+  return out;
+}
+
+/* ---------- рендер ---------- */
+function renderPlayers(){
+  const box = $('chips');
+  hint();
+  if(!state.players.length){
+    box.innerHTML = '<span class="empty">Пока никого нет. Добавьте игроков (2–12).</span>';
+    return;
+  }
+  box.innerHTML = state.players.map((p,i)=>
+    `<span class="chip"><b>${esc(p)}</b><button data-del="${i}" title="Удалить">×</button></span>`
+  ).join('');
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    state.players.splice(+b.dataset.del,1); resetSchedule(); renderPlayers(); save();
+  });
+}
+
+function hint(){
+  const n = state.players.length;
+  const free = MAX_COURTS * 2;
+  const el = $('hint');
+  if(n < 2) el.textContent = 'Добавьте минимум 2 игрока — на корте играют двое (1 на 1).';
+  else if(n > free) el.textContent = `Игроков ${n}: одновременно играют максимум ${free} (по 2 на ${MAX_COURTS} кортах), остальные отдыхают.`;
+  else el.textContent = `Игроков: ${n} — помещаются на корты, каждый играет 1 на 1.`;
+}
+
+function resetSchedule(){
+  state.schedule = []; state.scores = {};
+  $('schedule').innerHTML = ''; $('standingsCard').hidden = true;
+}
+
+function renderSchedule(){
+  const box = $('schedule');
+  if(!state.schedule.length){
+    box.innerHTML = '<p class="empty">Введите игроков и нажмите «Построить сетку».</p>';
+    $('standingsCard').hidden = true;
+    return;
+  }
+  box.innerHTML = state.schedule.map((round, ri) => {
+    const games = round.courts.map(([a,b], ci) => {
+      const gid = ri+'-'+ci;
+      const s = state.scores[gid] || {};
+      const t1n = esc(state.players[a]);
+      const t2n = esc(state.players[b]);
+      const win1 = s.a != null && s.b != null && +s.a > +s.b;
+      const win2 = s.a != null && s.b != null && +s.b > +s.a;
+      return `
+        <div class="court">
+          <div class="court-title">Корт ${ci+1}</div>
+          <div class="game">
+            <div class="team ${win1?'win':''}">${t1n}</div>
+            <div class="vs">VS</div>
+            <div class="team ${win2?'win':''}">${t2n}</div>
+          </div>
+          <div class="score">
+            <input type="number" min="0" max="99" inputmode="numeric" data-game="${gid}" data-team="a" value="${s.a ?? ''}" placeholder="—">
+            <input type="number" min="0" max="99" inputmode="numeric" data-game="${gid}" data-team="b" value="${s.b ?? ''}" placeholder="—">
+          </div>
+        </div>`;
+    }).join('');
+    const rest = round.resting.length
+      ? `<span class="rest">Отдыхают: ${round.resting.map(i=>esc(state.players[i])).join(', ')}</span>` : '';
+    return `<section class="round"><header><h3>Раунд ${ri+1}</h3>${rest}</header>${games}</section>`;
+  }).join('');
+
+  box.querySelectorAll('input[data-game]').forEach(inp => {
+    inp.oninput = () => {
+      const g = inp.dataset.game;
+      state.scores[g] = state.scores[g] || {};
+      state.scores[g][inp.dataset.team] = inp.value === '' ? null : +inp.value;
+      updateWins(); renderStandings(); save();
+    };
+  });
+  updateWins(); renderStandings();
+}
+
+function updateWins(){
+  $('schedule').querySelectorAll('.game').forEach(g => {
+    const inp = g.parentElement.querySelector('input[data-game]');
+    if(!inp) return;
+    const s = state.scores[inp.dataset.game] || {};
+    const teams = g.querySelectorAll('.team');
+    const done = s.a != null && s.b != null;
+    teams[0].classList.toggle('win', done && s.a > s.b);
+    teams[1].classList.toggle('win', done && s.b > s.a);
+  });
+}
+
+function renderStandings(){
+  const stats = state.players.map((name,i) => ({ name, i, p:0, w:0, l:0, pts:0 }));
+  state.schedule.forEach((round, ri) => round.courts.forEach(([a,b], ci) => {
+    const s = state.scores[ri+'-'+ci]; if(!s || s.a == null || s.b == null) return;
+    const add = (idx, pts, won) => { const st = stats[idx];
+      st.p++; st.pts += pts; won ? st.w++ : st.l++; };
+    add(a, +s.a, +s.a > +s.b);
+    add(b, +s.b, +s.b > +s.a);
+  }));
+  stats.sort((a,b)=> b.w - a.w || b.pts - a.pts || a.name.localeCompare(b.name));
+  $('standingsCard').hidden = !stats.some(s => s.p > 0);
+  $('standings').innerHTML = stats.map((s,i)=>`
+    <tr><td>${i+1}</td><td>${esc(s.name)}</td>
+    <td class="num">${s.p}</td><td class="num">${s.w}</td><td class="num">${s.l}</td><td class="num">${s.pts}</td></tr>
+  `).join('');
+}
+
+function renderAll(){ renderPlayers(); renderSchedule(); }
+
+/* ---------- действия ---------- */
+function addPlayer(){
+  const inp = $('name');
+  const v = inp.value.trim();
+  if(!v) return;
+  if(state.players.length >= MAX_PLAYERS) return toast('Максимум 12 игроков');
+  if(state.players.some(p => p.toLowerCase() === v.toLowerCase())) return toast('Такой игрок уже есть');
+  state.players.push(v); inp.value = ''; inp.focus();
+  resetSchedule(); renderPlayers(); save();
+}
+
+function generate(){
+  const n = state.players.length;
+  if(n < 2) return toast('Нужно минимум 2 игрока');
+  state.courts = +$('courts').value;
+  state.rounds = +$('rounds').value;
+  state.schedule = buildSchedule(state.players, state.courts, state.rounds);
+  state.scores = {};
+  renderSchedule(); save();
+  toast('Сетка готова');
+}
+
+function scheduleText(){
+  if(!state.schedule.length) return '';
+  return state.schedule.map((round, ri) => {
+    const lines = round.courts.map(([a,b], ci) =>
+      `  Корт ${ci+1}: ${state.players[a]}  vs  ${state.players[b]}`);
+    const rest = round.resting.length ? `\n  Отдыхают: ${round.resting.map(i=>state.players[i]).join(', ')}` : '';
+    return `Раунд ${ri+1}:\n${lines.join('\n')}${rest}`;
+  }).join('\n\n');
+}
+
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=> t.classList.remove('show'), 1800);
+}
+
+/* ---------- события ---------- */
+$('addBtn').onclick = addPlayer;
+$('name').onkeydown = e => { if(e.key === 'Enter') addPlayer(); };
+$('genBtn').onclick = generate;
+$('clearBtn').onclick = () => {
+  if(!state.players.length) return;
+  state.players = []; resetSchedule(); renderPlayers(); save();
+};
+$('demoBtn').onclick = () => {
+  state.players = ['Анна','Борис','Вера','Глеб','Дина','Егор','Жанна','Игорь','Катя','Лев','Марина','Никита'];
+  resetSchedule(); renderPlayers(); save(); toast('Добавлено 12 игроков');
+};
+$('printBtn').onclick = () => window.print();
+$('copyBtn').onclick = async () => {
+  const t = scheduleText();
+  if(!t) return toast('Сначала постройте сетку');
+  try{ await navigator.clipboard.writeText(t); toast('Скопировано'); }
+  catch(e){ prompt('Скопируйте текст:', t); }
+};
+$('courts').onchange = $('rounds').onchange = () => {
+  state.courts = +$('courts').value; state.rounds = +$('rounds').value; save();
+};
+
+/* ---------- старт ---------- */
+load();
+$('courts').value = state.courts || 2;
+$('rounds').value = state.rounds || 7;
+renderAll();
+</script>
+</body>
+</html>
