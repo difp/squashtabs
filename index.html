@@ -279,6 +279,12 @@
   .foot b{color:var(--text);font-weight:600}
   .foot a{color:var(--accent);text-decoration:none}
   .foot a:hover{text-decoration:underline}
+  .foot-links{display:flex;align-items:center;gap:var(--sp2);flex-wrap:wrap;margin-bottom:2px}
+  .foot-cap{font-size:var(--fs-xs);color:var(--muted);margin-right:2px}
+  .foot .icon{width:38px;height:38px;display:grid;place-items:center;background:var(--panel2);
+    border:1px solid var(--line);border-radius:var(--r-md);color:var(--muted);transition:.15s}
+  .foot .icon:hover{color:var(--accent);border-color:var(--accent);text-decoration:none}
+  .foot .icon svg{width:20px;height:20px;display:block;fill:currentColor}
   .foot-note{color:var(--muted);opacity:.8;line-height:1.5;max-width:62ch}
   @media print{
     body{background:#fff;color:#000}
@@ -515,11 +521,15 @@
   </div>
 
   <footer class="foot">
-    <div>
-      <b>Связь и обратная связь:</b>
-      ошибки, вопросы, идеи — <a href="https://t.me/sailofsoul" target="_blank" rel="noopener">Telegram @sailofsoul</a>
+    <div class="foot-links" id="footLinks" hidden>
+      <span class="foot-cap">Связь</span>
+      <a class="icon" id="tgIcon" target="_blank" rel="noopener" aria-label="Telegram" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+      </a>
+      <a class="icon" id="ghIcon" target="_blank" rel="noopener" aria-label="GitHub" hidden>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
     </div>
-    <div id="repoLine" hidden>Исходники: <a id="repoLink" target="_blank" rel="noopener">GitHub</a></div>
     <div class="foot-note">Приложение работает офлайн; данные хранятся в браузере.
       Общий режим передаёт данные через открытый сервис — не вводите персональные данные.</div>
   </footer>
@@ -771,9 +781,10 @@ const state = {
   past: {},                                  // index -> [{from, to, name}] — кто играл раньше
   schedule: [], scores: {}, structTs: 0, scoresTs: 0
 };
-// укажите адрес своего репозитория — он показывается в подвале страницы
-const REPO_URL = 'https://github.com/ВАШ_ЛОГИН/squash-grid';
+// Необязательные ссылки в подвале. Оставьте заглушку или пустую строку — иконка не появится.
+const REPO_URL = 'https://github.com/difp/squashtabs';
 const TG_URL = 'https://t.me/sailofsoul';
+const isPlaceholder = u => !u || /ВАШ_|ваш-|ваш_/.test(u);
 const sync = {
   on: false, room: '', role: 'judge', name: '', clientId: randId(),
   lastId: '', peers: {}, timer: null, status: 'off'
@@ -2606,12 +2617,20 @@ if(location.hash.length > 1){
   $('judgeName').value = sync.name || '';
   renderSetupValues();
   updateGenBtn();
-  // контакты в подвале: ссылка на репозиторий, если он указан
-  if(REPO_URL && !REPO_URL.includes('ВАШ_ЛОГИН')){
-    $('repoLink').href = REPO_URL;
-    $('repoLink').textContent = REPO_URL.replace(/^https?:\/\/(www\.)?/, '');
-    $('repoLine').hidden = false;
+  // иконки связи в подвале: показываем только заполненные ссылки
+  if(!isPlaceholder(TG_URL)){
+    const a = $('tgIcon');
+    a.href = TG_URL;
+    a.title = 'Telegram · @' + TG_URL.replace(/^https?:\/\/(t\.me|telegram\.me)\//, '').replace(/\/+$/, '');
+    a.hidden = false;
   }
+  if(!isPlaceholder(REPO_URL)){
+    const a = $('ghIcon');
+    a.href = REPO_URL;
+    a.title = 'GitHub · ' + REPO_URL.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/\/+$/, '');
+    a.hidden = false;
+  }
+  $('footLinks').hidden = $('tgIcon').hidden && $('ghIcon').hidden;
   switchView(judge.view || 'grid');
   renderAll();
   if(sync.room){
