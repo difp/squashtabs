@@ -278,6 +278,17 @@
     background:var(--accent);color:var(--ink);font:600 var(--fs-md)/1.2 var(--font);
     padding:11px 18px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
   .print-head{display:none}
+  /* предпросмотр листа */
+  .preview{position:fixed;inset:0;z-index:100;background:#0b0b0b;display:flex;flex-direction:column}
+  .pv-bar{display:flex;gap:var(--sp2);align-items:center;flex-wrap:wrap;padding:10px var(--sp4);
+    border-bottom:1px solid var(--line);background:var(--panel)}
+  .pv-title{font-weight:600}
+  .pv-note{font-size:var(--fs-xs);color:var(--muted)}
+  .pv-stage{flex:1 1 auto;overflow:auto;padding:16px;display:flex;justify-content:center;
+    align-items:flex-start;background:#565b63}
+  .pv-holder{flex:none}
+  #pvFrame{border:0;background:#565b63;display:block}
+  @media (max-width:620px){ .pv-bar button{font-size:var(--fs-sm);height:38px} }
   .print-grid-list{display:none}
   .toast.show{opacity:1;transform:translateX(-50%)}
   /* таблица: компактные строки и полоска прогресса */
@@ -292,6 +303,21 @@
   #panel-table .bar i{display:block;height:100%;background:var(--accent)}
   #panel-table .bar-num{color:var(--muted);font-size:var(--fs-cap);font-variant-numeric:tabular-nums}
   /* плей-офф: сетка навылет */
+  .court-title .air{margin-left:auto}
+  .mv{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;
+    font:inherit;font-size:var(--fs-xs);padding:2px 5px;border-radius:var(--r-sm);white-space:nowrap}
+  .mv:hover{color:var(--accent);background:var(--panel3)}
+  .court.src{opacity:.5}
+  .court.free{border-style:dashed;background:transparent}
+  .court.free .fn{font-size:var(--fs-xs);color:var(--muted);padding:6px 0}
+  .picking .court{cursor:pointer}
+  .picking .court:not(.src):hover{border-color:var(--accent)}
+  .court.drop{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+  .pick-bar{display:flex;align-items:center;gap:var(--sp2);flex-wrap:wrap;margin:0 0 var(--sp3);
+    padding:10px var(--sp3);border:1px solid var(--accent);border-radius:var(--r-md);
+    background:var(--panel2);font-size:var(--fs-sm)}
+  .po-size{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--muted)}
+  .po-size select{height:36px}
   .bracket{display:flex;gap:34px;overflow-x:auto;padding:var(--sp2) 2px}
   .bround{display:flex;flex-direction:column;justify-content:space-around;gap:10px;
     flex:0 0 178px}
@@ -337,7 +363,7 @@
   .foot-note{color:var(--muted);opacity:.8;line-height:1.5;max-width:62ch}
   @media print{
     body{background:#fff;color:#000}
-    .no-print,#panel-judge,#panel-share,.tabs,.toast,.alert{display:none!important}
+    .no-print,#panel-judge,#panel-share,.tabs,.toast,.alert,.preview{display:none!important}
     body.print-grid #panel-table,body.print-po #panel-table,body.print-po #panel-grid,
     body.print-table #panel-po,body.print-grid #panel-po{display:none!important}
     body.print-table #panel-grid{display:none!important}
@@ -365,7 +391,11 @@
     .bm .bnm,.brow .bnm{color:#000!important}
     .brow.win{background:#eee!important}
     .brow.empty .bnm{color:#888!important}
-    .bracket{gap:18px}
+    .bracket{gap:18px;overflow:visible!important}
+    /* 1/8 финала: четыре раунда плюс колонка победителя — колонки делаем уже */
+    .brow{grid-template-columns:1fr 36px}
+    .bm{padding:4px 5px}
+    .bm.champ{padding:10px}
     .bround{flex:0 0 150px}
     .bm,.brow{border-color:#bbb}
     .brow.win{background:#eee}
@@ -432,7 +462,7 @@
     <div class="spacer"></div>
     <span class="badge" id="syncBadge">офлайн</span>
   </header>
-  <p class="sub">Одиночные матчи 1 на 1. До 12 игроков и 3 кортов. Режим «каждый с каждым», судейская консоль и общая таблица для нескольких судей.</p>
+  <p class="sub">Одиночные матчи 1 на 1. До 16 игроков и 3 кортов. Режим «каждый с каждым», судейская консоль и общая таблица для нескольких судей.</p>
 
   <div id="banner"></div>
 
@@ -639,6 +669,21 @@
   </footer>
 </div>
 <div class="toast" id="toast"></div>
+<div class="preview" id="pvOverlay" hidden>
+  <div class="pv-bar">
+    <button class="primary" id="pvPrint">Печать / Сохранить в PDF</button>
+    <button class="ghost" id="pvSave">Скачать файлом</button>
+    <span class="pv-title" id="pvTitle"></span>
+    <span class="pv-note" id="pvNote"></span>
+    <span class="grow"></span>
+    <button class="ghost" id="pvClose">Закрыть</button>
+  </div>
+  <div class="pv-stage" id="pvStage">
+    <div class="pv-holder" id="pvHolder">
+      <iframe id="pvFrame" title="Предпросмотр листа"></iframe>
+    </div>
+  </div>
+</div>
 
 <script>
 /* QR-код без библиотек: версии 1–6, уровни коррекции L и M, байтовый режим (UTF-8).
@@ -877,7 +922,7 @@ const QRCode = (() => {
 })();
 
 /* ================= константы и состояние ================= */
-const MAX_PLAYERS = 12, MAX_COURTS = 3;
+const MAX_PLAYERS = 16, MAX_COURTS = 3;
 const LS = 'squash-grid-v2';
 const state = {
   players: [], courts: 2, rounds: 7, mode: 'everyone',
@@ -1578,6 +1623,22 @@ function renderSummary(){
 /* ================= рендер: сетка ================= */
 // подпись шага: просто порядковый номер — время видно рядом
 function roundTitle(ri){ return `№${ri + 1}`; }
+// какой матч сейчас переносим нажатием («⇄»): {ri, ci}
+let pickMove = null;
+function startPick(str){
+  if(!canEditScores()) return toast('Роль «зритель» не может менять сетку');
+  const m = /^(\d+)-(\d+)$/.exec(String(str));
+  if(!m) return;
+  pickMove = { ri: +m[1], ci: +m[2] };
+  renderGrid();
+  const bar = $('pickBar');
+  if(bar) bar.scrollIntoView({ block: 'nearest' });
+}
+function cancelPick(){
+  if(!pickMove) return;
+  pickMove = null;
+  renderGrid();
+}
 function renderGrid(){
   const box = $('panel-grid');
   $('sessionMin').disabled = $('mode').value === 'everyone';
@@ -1589,7 +1650,18 @@ function renderGrid(){
     return;
   }
   const lock = !canEditScores();
-  box.innerHTML = state.schedule.map((round, ri) => {
+  box.classList.toggle('picking', !!pickMove);
+  const pickBar = pickMove ? (() => {
+    const M = state.schedule[pickMove.ri] && state.schedule[pickMove.ri].courts[pickMove.ci];
+    if(!M) return '';
+    return `<div class="pick-bar no-print" id="pickBar">
+      <span>Матч <b>${esc(nameAt(M[0], pickMove.ri))} — ${esc(nameAt(M[1], pickMove.ri))}</b>
+      (${waveWindow(pickMove.ri).text}): нажмите корт, с которым поменяться временем.</span>
+      <span class="grow"></span>
+      <button class="ghost mini" id="pickCancel">Отмена</button>
+    </div>`;
+  })() : '';
+  box.innerHTML = pickBar + state.schedule.map((round, ri) => {
     const games = round.courts.map((m, ci) => {
       // матчи сверх числа кортов — уже сыгранные: они уходят в историю записи
       if(!m) return '';
@@ -1607,9 +1679,11 @@ function renderGrid(){
       const w1 = winner === 'a', w2 = winner === 'b';
       const ended = !!(s.end && s.end.winner);
       const onAir = isOnAir(g);
-      return `<div class="court ${onAir?'on-air':''}" data-ri="${ri}" data-ci="${ci}" ${lock?'':'draggable="true"'}>
+      const isSrc = pickMove && pickMove.ri === ri && pickMove.ci === ci;
+      return `<div class="court ${onAir?'on-air':''} ${isSrc?'src':''}" data-ri="${ri}" data-ci="${ci}" ${lock?'':'draggable="true"'}>
         <div class="court-title"><span class="grip" title="Перетащите, чтобы перенести игру">⠿</span>Корт ${ci+1}
-          ${onAir ? '<span class="air" style="margin-left:auto">в эфире</span>' : ''}</div>
+          ${onAir ? '<span class="air">в эфире</span>' : ''}
+          <button class="mv" data-mv="${ri}-${ci}" title="Перенести этот матч на другое время">⇄ перенести</button></div>
         <div class="game">
           <div class="team ${w1?'win':''}">${esc(nameAt(a, ri))}</div>
           <div class="vs">VS</div>
@@ -1625,11 +1699,21 @@ function renderGrid(){
     const rest = round.resting.length
       ? `<span class="rest">Отдыхают: ${round.resting.map(i => esc(nameAt(i, ri))).join(', ')}</span>` : '';
     const t = waveWindow(ri);
+    // в режиме переноса показываем свободные корты — как цель
+    let free = '';
+    if(pickMove){
+      for(let k = round.courts.length; k < state.courts; k++)
+        free += `<div class="court free" data-ri="${ri}" data-ci="${k}">
+          <div class="court-title">Корт ${k+1}</div>
+          <div class="fn">свободно · перенести сюда</div></div>`;
+    }
     return `<section class="round" data-slot="${ri}"><header>
       <h3><span class="idx">${roundTitle(ri)}</span>${t.text}</h3>
-      <span class="meta">${rest}</span></header>${games}</section>`;
+      <span class="meta">${rest}</span></header>${games}${free}</section>`;
   }).join('');
   updateGames();
+  const cancel = $('pickCancel');
+  if(cancel) cancel.onclick = cancelPick;
 }
 
 function updateGames(){
@@ -1734,6 +1818,68 @@ function refreshRest(slot){
 }
 function compact(slot){ slot.courts = slot.courts.filter(Boolean); }
 
+// счёт привязан к месту (запись + корт). При переносе матча он должен
+// ехать вместе с матчем, иначе результат останется на старом корте.
+function scoreSnapshot(rounds){
+  const snap = {};
+  rounds.forEach(ri => {
+    const round = state.schedule[ri]; if(!round) return;
+    snap[ri] = round.courts.map((m, ci) => m ? { m, s: state.scores[gid(ri, ci)] } : null);
+    round.courts.forEach((m, ci) => { delete state.scores[gid(ri, ci)]; });
+  });
+  return snap;
+}
+function scoreRestore(snap){
+  // матч мог уехать в другую запись — ищем счёт по всем местам снимка
+  const byMatch = new Map();
+  Object.keys(snap).forEach(ri => snap[ri].forEach(x => { if(x && x.s !== undefined) byMatch.set(x.m, x.s); }));
+  Object.keys(snap).forEach(ri => {
+    const round = state.schedule[ri]; if(!round) return;
+    round.courts.forEach((m, ci) => {
+      if(!m) return;
+      const s = byMatch.get(m);
+      if(s !== undefined) state.scores[gid(ri, ci)] = s;
+    });
+  });
+}
+// убираем пустые корты из записи (счёт переносит scoreSnapshot/scoreRestore)
+function compactRound(ri){
+  const round = state.schedule[ri]; if(!round) return;
+  round.courts = round.courts.filter(Boolean);
+}
+// кто после переноса играет две записи подряд — предупредим мягко
+function backToBackNames(ri){
+  const round = state.schedule[ri]; if(!round) return [];
+  const cur = slotPlayers(round.courts);
+  const prev = ri > 0 ? slotPlayers(state.schedule[ri - 1].courts) : new Set();
+  const next = ri + 1 < state.schedule.length ? slotPlayers(state.schedule[ri + 1].courts) : new Set();
+  return [...cur].filter(i => prev.has(i) || next.has(i)).map(i => state.players[i]);
+}
+// перенос одного матча в конкретное место: свободный корт — просто перенос,
+// занятый — обмен. После обмена в обеих записях те же игроки, поэтому
+// «занят в это время» случиться не может — матч переносится всегда.
+function placeMatch(srcRi, srcCi, dstRi, dstCi){
+  if(!canEditScores()) return toast('Роль «зритель» не может менять сетку');
+  if(srcRi === dstRi && srcCi === dstCi) return;
+  const A = state.schedule[srcRi], B = state.schedule[dstRi];
+  if(!A || !B) return;
+  const M = A.courts[srcCi]; if(!M) return;
+  const N = B.courts[dstCi] || null;
+  // обмен всегда возможен: в обеих записях остаются те же игроки
+  const snap = scoreSnapshot([srcRi, dstRi]);
+  A.courts[srcCi] = N;
+  B.courts[dstCi] = M;
+  compactRound(srcRi); compactRound(dstRi);
+  scoreRestore(snap);
+  refreshRest(A); refreshRest(B);
+  state.structTs = Date.now();
+  judge.round = dstRi;
+  save(); renderGrid(); renderJudge(); renderSummary(); publishFull();
+  const b2b = [...new Set([...backToBackNames(srcRi), ...backToBackNames(dstRi)])];
+  toast((N ? `Матчи обменялись временем · теперь ${waveWindow(dstRi).text}`
+           : `Матч перенесён на ${waveWindow(dstRi).text}`)
+        + (b2b.length ? ` · подряд играют: ${b2b.join(', ')}` : ''));
+}
 function moveMatchTo(ri, ci, targetRi, targetCi){
   if(!canEditScores()) return toast('Роль «зритель» не может менять сетку');
   if(targetRi === ri || targetRi < 0 || targetRi >= state.schedule.length) return;
@@ -1741,6 +1887,7 @@ function moveMatchTo(ri, ci, targetRi, targetCi){
   const M = B.courts[ci];
   if(!M) return;
   const want = (targetCi == null || targetCi >= state.courts) ? null : targetCi;
+  const snap = scoreSnapshot([ri, targetRi]);
   let ok = false, how = '';
 
   // 1. на нужный корт, если он свободен
@@ -1773,7 +1920,8 @@ function moveMatchTo(ri, ci, targetRi, targetCi){
       A.courts[j] = M; B.courts[ci] = N; ok = true; how = 'обмен';
     }
   }
-  if(!ok) return toast('Не получается: эти игроки заняты в то время');
+  if(!ok){ scoreRestore(snap); return toast('Не получается: эти игроки заняты в то время'); }
+  scoreRestore(snap);
 
   refreshRest(A); refreshRest(B);
   state.structTs = Date.now();
@@ -2290,7 +2438,7 @@ function addPlayer(){
   if(!canEditAll()) return toast('Ваша роль не позволяет менять состав');
   const inp = $('name'), v = inp.value.trim();
   if(!v) return;
-  if(state.players.length >= MAX_PLAYERS) return toast('Максимум 12 игроков');
+  if(state.players.length >= MAX_PLAYERS) return toast(`Максимум ${MAX_PLAYERS} игроков`);
   if(state.players.some(p => p.toLowerCase() === v.toLowerCase())) return toast('Такой игрок уже есть');
   state.players.push(v); inp.value = ''; inp.focus();
   save(); renderPlayers();
@@ -2475,7 +2623,8 @@ function poWinner(r, m){
 }
 function poRoundName(r){
   const left = state.po.rounds.length - r;      // 1 = финал
-  return left === 1 ? 'Финал' : left === 2 ? 'Полуфинал' : left === 3 ? 'Четвертьфинал' : `Раунд ${r + 1}`;
+  return left === 1 ? 'Финал' : left === 2 ? 'Полуфинал' : left === 3 ? 'Четвертьфинал'
+    : left === 4 ? '1/8 финала' : `Раунд ${r + 1}`;
 }
 // расстановка «1–8, 4–5, 3–6, 2–7»: сильные встречаются как можно позже
 function seedPairs(size){
@@ -2550,16 +2699,21 @@ function renderPlayoff(){
       <p class="note" style="margin-top:0">Сетка навылет: проигравший выбывает. Можно собрать из текущей
       таблицы (сильные расходятся по разным половинам) или развести случайным жребием.</p>
       <div class="actions-row" style="margin-top:var(--sp3)">
-        <button class="primary" id="poFromTable">Собрать из таблицы на 8</button>
-        <button class="ghost" id="poFromTable4">из таблицы на 4</button>
-        <button class="ghost" id="poDraw8">жребием на 8</button>
-        <button class="ghost" id="poDraw4">жребием на 4</button>
+        <label class="po-size">участников
+          <select id="poSize">
+            <option value="4">4</option>
+            <option value="8" selected>8</option>
+            <option value="16">16 · 1/8 финала</option>
+          </select>
+        </label>
+        <button class="primary" id="poFromTable">Собрать из таблицы</button>
+        <button class="ghost" id="poDraw">Жребием</button>
       </div>
       <p class="note">Нужно минимум столько игроков, сколько в сетке.</p>
     </section>`;
-    const bind = (id, size, draw) => { const b = $(id); if(b) b.onclick = () => buildPlayoff(size, draw); };
-    bind('poFromTable', 8, false); bind('poFromTable4', 4, false);
-    bind('poDraw8', 8, true); bind('poDraw4', 4, true);
+    const fromTable = $('poFromTable'), draw = $('poDraw'), pick = $('poSize');
+    if(fromTable) fromTable.onclick = () => buildPlayoff(+pick.value, false);
+    if(draw) draw.onclick = () => buildPlayoff(+pick.value, true);
     return;
   }
   const po = state.po, champ = poChampion();
@@ -2644,17 +2798,96 @@ function renderPrintHead(kind){
         : kind === 'po' ? ` · ${state.po ? state.po.size : 0} участников` : ` · начало ${fmtHM(parseHM(state.startTime))}`}</div>
     ${kind === 'table' ? '<div class="ph-sign">Судья: ____________________&nbsp;&nbsp;&nbsp;Подпись: ____________________</div>' : ''}`;
 }
-function printSheet(kind){
+// собирает лист: шапка, содержимое, формат бумаги
+function prepareSheet(kind){
   if(!state.schedule.length) return toast('Сначала постройте сетку');
   renderPrintHead(kind);
   if(kind === 'grid') renderPrintGrid();
-  // формат листа: сетка навылет широкая — печатаем поперёк
   $('pageRule').textContent = kind === 'po'
     ? '@page{size:A4 landscape;margin:10mm}'
     : '@page{size:A4 portrait;margin:14mm 12mm}';
   document.body.classList.remove('print-grid', 'print-table', 'print-po');
   document.body.classList.add('print-' + kind);
-  setTimeout(() => window.print(), 60);
+}
+// весь CSS приложения: в листе нужны и вёрстка, и печатные правила
+function appCssText(){
+  let out = '';
+  for(const sh of document.styleSheets){
+    let rules; try{ rules = sh.cssRules; }catch(e){ continue; }
+    for(const r of rules) out += r.cssText + '\n';
+  }
+  return out;
+}
+// какие правила действуют при печати — нужны для предпросмотра
+function printRulesText(){
+  const block = [...document.styleSheets].map(s => { try { return [...s.cssRules]; } catch(e){ return []; } })
+    .flat().find(r => r.conditionText && /print/.test(r.conditionText));
+  return block ? [...block.cssRules].map(r => r.cssText).join('\n') : '';
+}
+function sheetHtml(kind){
+  renderPrintHead(kind);
+  if(kind === 'grid') renderPrintGrid();
+  let src = kind === 'table' ? $('panel-table') : kind === 'po' ? $('panel-po') : $('printGrid');
+  const clone = src.cloneNode(true);
+  clone.removeAttribute('hidden');                        // панель может быть скрыта на экране
+  clone.querySelectorAll('[hidden],.no-print').forEach(e => e.removeAttribute ? e.removeAttribute('hidden') : 0);
+  clone.querySelectorAll('.no-print').forEach(e => e.remove());
+  const margins = kind === 'po' ? '10mm' : '14mm 12mm';
+  const width = kind === 'po' ? '277mm' : '186mm';
+  // порядок важен: сперва вёрстка приложения, затем печатные правила, затем вид листа
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+    <style>${appCssText()}</style>
+    <style>${printRulesText()}</style>
+    <style>
+      @page{size:A4 ${kind === 'po' ? 'landscape' : 'portrait'};margin:${margins}}
+      html,body{background:#565b63!important;overflow:auto}
+      body{margin:0;padding:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,sans-serif}
+      .sheet{width:${width};margin:14px auto;background:#fff;padding:${margins};box-sizing:border-box;
+        box-shadow:0 6px 24px rgba(0,0,0,.35);color:#000}
+      .sheet .print-head{display:block}
+      .sheet .print-head h1{font-size:20px}
+      .sheet .tbl-head{display:none!important}
+    </style></head>
+    <body class="print-${kind}"><div class="sheet"><div class="print-head">${$('printHead').innerHTML}</div>${clone.innerHTML}</div></body></html>`;
+}
+let pvKind = null;
+// лист всегда виден целиком: если окно уже A4 — уменьшаем масштаб
+function fitPreview(){
+  if(!pvKind) return;
+  const stage = $('pvStage'), frame = $('pvFrame'), holder = $('pvHolder');
+  if(!stage || !frame) return;
+  const mm = px => Math.round(px * 96 / 25.4);          // 96 dpi, как в CSS
+  // +16px, чтобы вертикальная прокрутка не сужала полосу набора
+  const w = (pvKind === 'po' ? mm(277) : mm(186)) + 16;
+  const availW = Math.max(240, stage.clientWidth - 32);
+  const availH = Math.max(240, stage.clientHeight - 32);
+  const k = Math.min(1, availW / w);
+  holder.style.width = Math.round(w * k) + 'px';
+  holder.style.height = availH + 'px';
+  frame.style.width = w + 'px';
+  frame.style.height = Math.round(availH / k) + 'px';
+  frame.style.transform = `scale(${k})`;
+  frame.style.transformOrigin = 'top left';
+  const base = pvKind === 'po' ? 'Лист A4, альбомная' : 'Лист A4, книжная';
+  $('pvNote').textContent = base + (k < 1 ? ` · масштаб ${Math.round(k * 100)}%` : '')
+    + ' · в диалоге печати можно сохранить в PDF';
+}
+window.addEventListener('resize', () => { if(pvKind && !$('pvOverlay').hidden) fitPreview(); });
+function printSheet(kind){
+  prepareSheet(kind);
+  pvKind = kind;
+  const names = { grid: 'Расписание', table: 'Итоговая таблица', po: 'Сетка плей-офф' };
+  $('pvOverlay').hidden = false;
+  const frame = $('pvFrame');
+  frame.onload = () => fitPreview();
+  frame.srcdoc = sheetHtml(kind);
+  $('pvTitle').textContent = names[kind];
+  fitPreview();
+}
+function closePreview(){
+  $('pvOverlay').hidden = true;
+  $('pvFrame').srcdoc = '';
+  document.body.classList.remove('print-grid', 'print-table', 'print-po');
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('print-grid', 'print-table', 'print-po'));
 
@@ -2895,7 +3128,7 @@ function generate(){
 }
 function switchView(v){
   judge.view = v;
-  ['grid','judge','table','share'].forEach(k => {
+  ['grid','judge','table','po','share'].forEach(k => {
     $('panel-' + k).hidden = k !== v;
   });
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
@@ -2995,7 +3228,7 @@ $('panel-grid').addEventListener('change', e => { if(e.target.matches('input[dat
 // перетаскивание игр «как плитку»
 let dragSrc = null;
 function clearDropMarks(){
-  document.querySelectorAll('#panel-grid .round.drop').forEach(r => r.classList.remove('drop'));
+  document.querySelectorAll('#panel-grid .drop').forEach(r => r.classList.remove('drop'));
   document.querySelectorAll('#panel-grid .court.dragging').forEach(t => t.classList.remove('dragging'));
 }
 $('panel-grid').addEventListener('mousedown', e => {
@@ -3019,13 +3252,16 @@ $('panel-grid').addEventListener('dragstart', e => {
 $('panel-grid').addEventListener('dragend', () => { clearDropMarks(); dragSrc = null; });
 $('panel-grid').addEventListener('dragover', e => {
   if(!dragSrc) return;
+  const tile = e.target.closest('.court');
   const slot = e.target.closest('.round');
   if(!slot) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  if(!slot.classList.contains('drop')){
+  // свой корт подсвечиваем точечно (обмен), запись целиком — как и раньше
+  const mark = (tile && tile.dataset.ri) ? tile : slot;
+  if(!mark.classList.contains('drop')){
     clearDropMarks();
-    slot.classList.add('drop');
+    mark.classList.add('drop');
   }
 });
 $('panel-grid').addEventListener('dragleave', e => {
@@ -3033,12 +3269,33 @@ $('panel-grid').addEventListener('dragleave', e => {
   if(slot && !slot.contains(e.relatedTarget)) slot.classList.remove('drop');
 });
 $('panel-grid').addEventListener('drop', e => {
+  const tile = e.target.closest('.court');
   const slot = e.target.closest('.round');
   if(!dragSrc || !slot) return;
   e.preventDefault();
   const src = dragSrc, target = +slot.dataset.slot;
   clearDropMarks(); dragSrc = null;
-  if(target !== src.ri) moveMatchTo(src.ri, src.ci, target);
+  if(tile && tile.dataset.ri != null && tile.dataset.ri !== ''){
+    // уронили на конкретный корт — матч идёт именно туда (или меняется местами)
+    placeMatch(src.ri, src.ci, +tile.dataset.ri, +tile.dataset.ci);
+  } else if(target !== src.ri){
+    moveMatchTo(src.ri, src.ci, target);
+  }
+});
+// перенос матча нажатием: «⇄» — выбрать матч, затем корт
+$('panel-grid').addEventListener('click', e => {
+  const mv = e.target.closest('.mv');
+  if(mv){ startPick(mv.dataset.mv); return; }
+  if(e.target.closest('#pickCancel')){ cancelPick(); return; }
+  if(!pickMove) return;
+  if(e.target.closest('input,button,select,a')) return;
+  const tile = e.target.closest('.court');
+  if(!tile || tile.dataset.ri == null || tile.dataset.ri === '') return;
+  const from = pickMove;
+  pickMove = null;
+  const dstRi = +tile.dataset.ri, dstCi = +tile.dataset.ci;
+  if(from.ri === dstRi && from.ci === dstCi) renderGrid();
+  else placeMatch(from.ri, from.ci, dstRi, dstCi);
 });
 // счёт в консоли судьи
 $('panel-judge').addEventListener('input', e => {
@@ -3062,6 +3319,20 @@ $('printBtn2').onclick = () => printSheet('grid');
 $('printTableBtn').onclick = () => printSheet('table');
 $('printTableBtn2').onclick = () => printSheet('table');
 $('soundFile').onchange = e => { loadSoundFile(e.target.files[0]); e.target.value = ''; };
+$('pvClose').onclick = closePreview;
+$('pvPrint').onclick = () => { if(pvKind) prepareSheet(pvKind); window.print(); };
+$('pvSave').onclick = () => {
+  if(!pvKind) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([$('pvFrame').srcdoc], { type: 'text/html' }));
+  a.download = 'сквош-' + ({ grid: 'расписание', table: 'таблица', po: 'плей-офф' }[pvKind]) + '.html';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  if(!$('pvOverlay').hidden) closePreview();
+  else if(pickMove) cancelPick();
+});
 $('copyTextBtn').onclick = async () => {
   const t = scheduleText();
   if(!t) return toast('Сначала постройте сетку');
