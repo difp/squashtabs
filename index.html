@@ -279,6 +279,7 @@
     padding:11px 18px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
   .print-head{display:none}
   /* предпросмотр листа */
+  [hidden]{display:none!important}          /* display:flex у .preview не должен показывать скрытый лист */
   .preview{position:fixed;inset:0;z-index:100;background:#0b0b0b;display:flex;flex-direction:column}
   .pv-bar{display:flex;gap:var(--sp2);align-items:center;flex-wrap:wrap;padding:10px var(--sp4);
     border-bottom:1px solid var(--line);background:var(--panel)}
