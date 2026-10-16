@@ -362,6 +362,8 @@
   .foot .icon:hover{color:var(--accent);border-color:var(--accent);text-decoration:none}
   .foot .icon svg{width:20px;height:20px;display:block;fill:currentColor}
   .foot-note{color:var(--muted);opacity:.8;line-height:1.5;max-width:62ch}
+  .foot-build{font-size:var(--fs-xs);color:var(--muted);opacity:.65}
+  .foot-build span{font-variant-numeric:tabular-nums;color:var(--text);opacity:.85}
   @media print{
     body{background:#fff;color:#000}
     .no-print,#panel-judge,#panel-share,.tabs,.toast,.alert,.preview{display:none!important}
@@ -667,6 +669,9 @@
     </div>
     <div class="foot-note">Приложение работает офлайн; данные хранятся в браузере.
       Общий режим передаёт данные через открытый сервис — не вводите персональные данные.</div>
+    <div class="foot-build" title="Дата файла, который отдал сервер. Если она старая — браузер показал
+копию из кэша: обновите страницу клавишами Ctrl+F5 (на Mac — Cmd+Shift+R).">
+      сборка <span id="buildStamp">—</span></div>
   </footer>
 </div>
 <div class="toast" id="toast"></div>
@@ -924,6 +929,19 @@ const QRCode = (() => {
 
 /* ================= константы и состояние ================= */
 const MAX_PLAYERS = 16, MAX_COURTS = 3;
+
+/* Метка сборки в подвале. Берётся дата файла, которую отдал сервер:
+   если видите старую дату — значит браузер показал копию из кэша,
+   и страницу надо обновить (Ctrl+F5). Запасное значение — на случай,
+   когда дата недоступна. */
+const BUILD_FALLBACK = '16.10';
+function buildStamp(){
+  let d = null;
+  try{ d = new Date(document.lastModified || ''); }catch(e){}
+  if(!d || isNaN(d.getTime())) return BUILD_FALLBACK;
+  const p = n => String(n).padStart(2, '0');
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
 const LS = 'squash-grid-v2';
 const state = {
   players: [], courts: 2, rounds: 7, mode: 'everyone',
@@ -3401,6 +3419,7 @@ if(location.hash.length > 1){
     a.hidden = false;
   }
   $('footLinks').hidden = $('tgIcon').hidden && $('ghIcon').hidden;
+  $('buildStamp').textContent = buildStamp();
   switchView(judge.view || 'grid');
   renderAll();
   if(sync.room){
