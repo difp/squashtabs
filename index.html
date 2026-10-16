@@ -205,6 +205,20 @@
   .crow .steps input{width:64px;height:42px;text-align:center;font-size:20px;font-weight:700;padding:0}
   .jactions{display:flex;gap:var(--sp2);flex-wrap:wrap;align-items:center;margin-top:var(--sp3)}
   .jactions .badge{margin-left:auto}
+  /* таймер матча */
+  .timer{display:flex;align-items:center;gap:var(--sp2);flex-wrap:wrap;
+    padding-bottom:var(--sp3);margin-bottom:var(--sp2);border-bottom:1px solid var(--line)}
+  .t-disp{font-variant-numeric:tabular-nums;font-size:var(--fs-xl);font-weight:700;letter-spacing:.5px;
+    min-width:86px}
+  .t-disp.hot{color:var(--on-air)}
+  .timer.running .t-disp{color:var(--accent)}
+  .timer.running .t-disp.hot{color:var(--on-air)}
+  .timer .sound-lbl{font-size:var(--fs-cap);text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);font-weight:600}
+  .timer select{height:32px;width:auto;padding:0 24px 0 var(--sp2);font-size:var(--fs-xs);background:var(--panel2)}
+  body.bell .jcard{animation:bell .35s 4}
+  @keyframes bell{0%,100%{border-color:var(--line)}50%{border-color:var(--on-air)}}
+  @media (prefers-reduced-motion:reduce){ body.bell .jcard{animation:none;border-color:var(--on-air)} }
   details{margin-top:var(--sp3)}
   summary{cursor:pointer;font-size:var(--fs-xs);color:var(--muted)}
   .jlist{margin-top:var(--sp5)}
@@ -262,6 +276,7 @@
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
     background:var(--accent);color:var(--ink);font:600 var(--fs-md)/1.2 var(--font);
     padding:11px 18px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
+  .print-head{display:none}
   .toast.show{opacity:1;transform:translateX(-50%)}
   /* таблица: соревновательный режим */
   .tbl-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp3);flex-wrap:wrap;margin-bottom:var(--sp3)}
@@ -289,6 +304,8 @@
   @media print{
     body{background:#fff;color:#000}
     .no-print,#panel-judge,#panel-share,.tabs,.toast,.alert{display:none!important}
+    body.print-grid #panel-table{display:none!important}
+    body.print-table #panel-grid{display:none!important}
     .card,.round,.team,.jcard{background:#fff;border-color:#ccc;color:#000}
     .round>header{background:#eee}
     .time{color:#000}
@@ -298,6 +315,20 @@
     .air{display:none!important}
     .court.on-air{box-shadow:none}
     .foot{display:none}
+    .print-head{display:block;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #000}
+    header.top,.sub,#banner,.tbl-head h2,.jlist h2{display:none!important}
+    .print-head h1{font-size:20px;margin:0 0 4px;color:#000}
+    .print-head .ph-meta{font-size:13px;color:#333}
+    .print-head .ph-sign{margin-top:8px;font-size:13px;color:#333}
+    table{font-size:12px}
+    th,td{padding:5px 8px;border-bottom:1px solid #bbb}
+    body.print-table #panel-table th{background:#f0f0f0}
+    input,select,textarea{background:#fff!important;color:#000!important;border-color:#bbb!important}
+    input::placeholder{color:#999!important}
+    td.pos{color:#0a7a3d!important}
+    td.neg{color:#b3261e!important}
+    .td-tag{color:#666!important}
+    tr{page-break-inside:avoid}
     #panel-grid,#panel-table{display:block!important}
   }
   @media (max-width:820px){
@@ -324,6 +355,7 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="print-head" id="printHead"></div>
   <header class="top">
     <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32">
       <circle cx="16" cy="16" r="11.6" fill="#111111" stroke="var(--accent)" stroke-width="2.2"/>
@@ -424,10 +456,13 @@
   <section class="card" id="panel-table" hidden>
     <div class="tbl-head">
       <h2>Таблица</h2>
-      <label class="chk no-print">
-        <input type="checkbox" id="competitive">
-        <span>Соревновательный режим — ранжировать по разнице очков</span>
-      </label>
+      <div class="actions-row" style="margin-top:0">
+        <label class="chk no-print">
+          <input type="checkbox" id="competitive">
+          <span>Соревновательный режим — по разнице очков</span>
+        </label>
+        <button class="ghost mini no-print" id="printTableBtn">Печать таблицы</button>
+      </div>
     </div>
     <div style="overflow-x:auto">
       <table>
@@ -512,9 +547,11 @@
       <div class="actions-row" style="margin-top:0">
         <button class="ghost" id="exportBtn">Экспорт файла</button>
         <button class="ghost" id="importBtn">Импорт файла</button>
-        <button class="ghost" id="printBtn2">Печать</button>
+        <button class="ghost" id="printBtn2">Печать сетки</button>
+        <button class="ghost" id="printTableBtn2">Печать таблицы</button>
         <button class="ghost" id="copyTextBtn">Скопировать текстом</button>
         <input type="file" id="importFile" accept="application/json" hidden>
+        <input type="file" id="soundFile" accept="audio/*" hidden>
       </div>
       <p class="note">Файл со всей сеткой и счётом можно передать судье любым способом и загрузить у него.</p>
     </section>
@@ -1801,6 +1838,7 @@ function renderJudge(){
       выбранному игроку, даже если разница в 2 очка не набрана.</p>
     </details>`;
     main = `<div class="jcard">
+      ${timerBlock()}
       ${row(m[0], 'a', w1)}
       ${row(m[1], 'b', w2)}
       ${decisionRow}
@@ -1879,6 +1917,7 @@ function renderJudge(){
     if(b.dataset.act === 'next') judge.round = pos >= 0 && list[pos+1] !== undefined ? list[pos+1] : Math.min(judge.round+1, state.schedule.length-1);
     else judge.round = pos > 0 ? list[pos-1] : Math.max(judge.round-1, 0);
     judge.suggest = null;
+    if(b.dataset.act === 'next' && timer.running) timer.left = timer.total;   // новый матч — таймер заново
     renderJudge();
     $('panel-judge').scrollIntoView({ behavior:'smooth', block:'start' });
   });
@@ -1907,6 +1946,7 @@ function renderJudge(){
   box.querySelectorAll('[data-move]').forEach(b => b.onclick = () => {
     moveMatch(judge.round, judge.court, +b.dataset.move);
   });
+  wireTimer();
   box.querySelectorAll('[data-dec]').forEach(b => b.onclick = () => {
     decision(curG(), b.dataset.dec, b.dataset.decWho || 'a');
   });
@@ -2177,6 +2217,187 @@ function addPlayer(){
   }
   renderSummary();
 }
+/* ================= звуки и таймер матча =================
+   Звуки синтезируются встроенно (Web Audio), поэтому ничего скачивать
+   не нужно. Можно подключить и свой файл — он хранится в браузере
+   и никуда не отправляется.                                          */
+const PREF_KEY = 'squash-sound-v1';
+const pref = { endSound:'gong', warnSound:'short', warnOn:true, custom:'', customName:'' };
+const SOUND_NAMES = { gong:'гонг', whistle:'свисток', double:'двойной', short:'короткий', long:'длинный', custom:'свой файл' };
+
+function loadPref(){ try{ Object.assign(pref, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); }catch(e){} renderPrefs(); }
+function savePref(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(pref)); }catch(e){ toast('Не удалось сохранить настройку звука'); } }
+
+let AC = null;
+function audio(){
+  AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+  if(AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(freq, dur, delay, type, vol){
+  const ctx = audio(), t = ctx.currentTime + (delay || 0);
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol == null ? 0.35 : vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function sweep(from, to, dur){
+  const ctx = audio(), t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(from, t);
+  o.frequency.linearRampToValueAtTime(to, t + dur * 0.35);
+  o.frequency.linearRampToValueAtTime(from * 0.94, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.28, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+const SOUNDS = {
+  short:   () => tone(880, 0.18),
+  double:  () => { tone(880, 0.14, 0); tone(1180, 0.2, 0.22); },
+  long:    () => { tone(440, 0.9, 0, 'triangle', 0.4); tone(220, 0.9, 0, 'sine', 0.25); },
+  whistle: () => sweep(1750, 2100, 0.5),
+  gong:    () => { tone(196, 1.8, 0, 'sine', 0.5); tone(294, 1.5, 0.02); tone(392, 1.2, 0.04, 'sine', 0.22); }
+};
+function playSound(name){
+  try{
+    if(name === 'custom'){
+      if(!pref.custom) return toast('Свой звук не загружен');
+      const a = new Audio(pref.custom);
+      a.play().catch(() => toast('Браузер не дал воспроизвести звук — нажмите ещё раз'));
+      return;
+    }
+    (SOUNDS[name] || SOUNDS.short)();
+  }catch(e){ /* звук не критичен */ }
+}
+
+/* --- таймер --- */
+const timer = { total: 0, left: 0, running: false, handle: null, gid: null };
+function timerPaint(){
+  const d = $('tDisp'); if(!d) return;
+  const s = Math.max(0, timer.left);
+  d.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  d.classList.toggle('hot', s <= 60);
+  const box = d.closest('.timer');
+  if(box) box.classList.toggle('running', timer.running);
+  const b = $('tStart');
+  if(b) b.textContent = timer.running ? 'Пауза' : (timer.left >= timer.total ? 'Старт' : 'Продолжить');
+}
+function timerStart(){
+  if(timer.running) return;
+  if(!timer.total) timer.total = matchMinutes() * 60;
+  if(timer.left <= 0) timer.left = timer.total;
+  timer.running = true;
+  if(!timer.handle) timer.handle = setInterval(timerStep, 1000);
+  timerPaint();
+}
+function timerPause(){
+  timer.running = false;
+  clearInterval(timer.handle); timer.handle = null;
+  timerPaint();
+}
+function timerReset(){
+  timerPause();
+  timer.total = matchMinutes() * 60;
+  timer.left = timer.total;
+  timerPaint();
+}
+function timerStep(){
+  if(!timer.running) return;
+  timer.left--;
+  if(timer.left === 60 && pref.warnOn) playSound(pref.warnSound);
+  if(timer.left <= 0){
+    timer.left = 0;
+    timerPause();
+    playSound(pref.endSound);
+    document.body.classList.add('bell');
+    setTimeout(() => document.body.classList.remove('bell'), 1500);
+  }
+  timerPaint();
+}
+function timerBlock(){
+  const opts = ['gong','whistle','double','long','short'].map(k =>
+    `<option value="${k}" ${pref.endSound === k ? 'selected' : ''}>${SOUND_NAMES[k]}</option>`).join('')
+    + `<option value="custom" ${pref.endSound === 'custom' ? 'selected' : ''}>${pref.customName ? 'свой: ' + esc(pref.customName) : 'свой файл…'}</option>`;
+  return `<div class="timer no-print">
+    <button class="primary mini" id="tStart">Старт</button>
+    <button class="ghost mini" id="tReset" title="Сбросить на длительность матча">⟲</button>
+    <span class="t-disp" id="tDisp">--:--</span>
+    <span class="grow"></span>
+    <span class="sound-lbl">сигнал</span>
+    <select id="soundPick">${opts}</select>
+    <button class="ghost mini" id="soundDemo" title="Проверить звук">♪</button>
+    <label class="chk" title="Сигнал за минуту до конца">
+      <input type="checkbox" id="warnOn" ${pref.warnOn ? 'checked' : ''}><span>за 1 мин</span>
+    </label>
+  </div>`;
+}
+function wireTimer(){
+  const start = $('tStart'), reset = $('tReset'), demo = $('soundDemo'), pick = $('soundPick'), warn = $('warnOn');
+  if(start) start.onclick = () => timer.running ? timerPause() : timerStart();
+  if(reset) reset.onclick = () => timerReset();
+  if(demo) demo.onclick = () => playSound(pref.endSound);
+  if(pick) pick.onchange = () => {
+    pref.endSound = pick.value;
+    if(pref.endSound === 'custom' && !pref.custom) $('soundFile').click();
+    savePref(); playSound(pref.endSound);
+  };
+  if(warn) warn.onchange = () => { pref.warnOn = warn.checked; savePref(); };
+  if(!timer.total) { timer.total = matchMinutes() * 60; timer.left = timer.total; }
+  timerPaint();
+}
+function renderPrefs(){
+  const pick = $('soundPick');
+  if(pick && pref.endSound) pick.value = pref.endSound;
+}
+function loadSoundFile(file){
+  if(!file) return;
+  if(file.size > 2 * 1024 * 1024) return toast('Файл больше 2 МБ — выберите покороче');
+  const r = new FileReader();
+  r.onload = () => {
+    pref.custom = r.result;
+    pref.customName = file.name.replace(/\.[^.]+$/, '').slice(0, 24);
+    pref.endSound = 'custom';
+    savePref();
+    toast('Свой звук подключён: ' + pref.customName);
+    renderJudge();
+  };
+  r.readAsDataURL(file);
+}
+
+/* ================= печать ================= */
+function renderPrintHead(kind){
+  const today = new Date().toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:'numeric' });
+  const parts = [
+    `${state.players.length} игроков`,
+    `${state.courts} ${state.courts === 1 ? 'корт' : 'корта'}`,
+    state.mode === 'everyone' ? 'каждый с каждым' : 'по времени',
+    `матч ${matchMinutes()} мин`
+  ];
+  const played = state.schedule.reduce((n, r, ri) => n + r.courts.filter((m, ci) => m && matchResult(gid(ri, ci))).length, 0);
+  const total = state.schedule.reduce((n, r) => n + r.courts.filter(Boolean).length, 0);
+  $('printHead').innerHTML = `
+    <h1>Сквош · ${kind === 'table' ? 'итоговая таблица' : 'расписание'}</h1>
+    <div class="ph-meta">${esc(today)} · ${esc(parts.join(' · '))}${
+      kind === 'table' ? ` · сыграно ${played} из ${total}` : ` · начало ${fmtHM(parseHM(state.startTime))}`}</div>
+    ${kind === 'table' ? '<div class="ph-sign">Судья: ____________________&nbsp;&nbsp;&nbsp;Подпись: ____________________</div>' : ''}`;
+}
+function printSheet(kind){
+  if(!state.schedule.length) return toast('Сначала постройте сетку');
+  if(kind === 'table' && !canEditScores()) { /* зрителям тоже можно печатать */ }
+  renderPrintHead(kind);
+  document.body.classList.remove('print-grid', 'print-table');
+  document.body.classList.add('print-' + kind);
+  setTimeout(() => window.print(), 60);
+}
+window.addEventListener('afterprint', () => document.body.classList.remove('print-grid', 'print-table'));
+
 /* ================= разбор списка игроков из текста =================
    Организатор вставляет сообщение как есть: с нумерацией, телефонами,
    ссылками, эмодзи и служебными словами. Приложение осторожно вытаскивает
@@ -2564,7 +2785,10 @@ $('copyLinkBtn').onclick = async () => {
   try{ await navigator.clipboard.writeText($('shareLink').value); toast('Ссылка скопирована'); }
   catch(e){ $('shareLink').select(); toast('Скопируйте ссылку вручную'); }
 };
-$('printBtn2').onclick = () => switchView('grid') || window.print();
+$('printBtn2').onclick = () => printSheet('grid');
+$('printTableBtn').onclick = () => printSheet('table');
+$('printTableBtn2').onclick = () => printSheet('table');
+$('soundFile').onchange = e => { loadSoundFile(e.target.files[0]); e.target.value = ''; };
 $('copyTextBtn').onclick = async () => {
   const t = scheduleText();
   if(!t) return toast('Сначала постройте сетку');
@@ -2602,6 +2826,7 @@ $('importFile').onchange = e => {
 
 /* ================= старт ================= */
 load();
+loadPref();
 if(location.hash.length > 1){
   const hp = new URLSearchParams(location.hash.slice(1));
   if(hp.get('room')) sync.room = hp.get('room').toUpperCase();
