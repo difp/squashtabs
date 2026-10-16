@@ -60,7 +60,7 @@
   .actions-row{display:flex;gap:var(--sp2);flex-wrap:wrap;margin-top:var(--sp3)}
   input,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);
     border-radius:var(--r-md);padding:0 var(--sp3);height:42px;font:var(--fs-md)/1 var(--font);outline:none;width:100%}
-  select{padding-right:var(--sp2)}
+  select{padding-right:26px;text-overflow:ellipsis}
   input::placeholder{color:#6a675e}
   /* у числовых полей убираем стрелки, чтобы цифра стояла ровно по центру */
   input[type=number]{-moz-appearance:textfield;appearance:textfield}
@@ -70,7 +70,8 @@
   input:disabled,select:disabled,button:disabled{opacity:.45;cursor:not-allowed}
   /* кнопки */
   button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:var(--r-md);
-    height:42px;padding:0 var(--sp4);font:600 var(--fs-md)/1 var(--font);cursor:pointer;transition:.15s}
+    height:42px;padding:0 var(--sp4);font:600 var(--fs-md)/1 var(--font);cursor:pointer;transition:.15s;
+    white-space:nowrap}
   button:hover:not(:disabled){border-color:var(--muted)}
   button.primary{background:var(--accent);border-color:var(--accent);color:var(--ink)}
   button.primary:hover:not(:disabled){filter:brightness(1.08)}
@@ -85,6 +86,18 @@
   .chip button{background:none;border:none;height:auto;color:var(--muted);padding:0 4px;
     font-size:16px;line-height:1;cursor:pointer}
   .chip button:hover:not(:disabled){color:var(--danger)}
+  .chip button[data-edit]{font-size:13px}
+  .chip button[data-edit]:hover:not(:disabled){color:var(--accent)}
+  .chip-hist{font-size:var(--fs-cap);color:var(--live);cursor:help;white-space:nowrap}
+  textarea{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:var(--r-md);padding:10px var(--sp3);font:var(--fs-md)/1.45 var(--font);
+    width:100%;min-height:78px;resize:vertical;outline:none}
+  textarea:focus{border-color:var(--accent2)}
+  textarea::placeholder{color:#6a675e}
+  .paste{margin-top:var(--sp3)}
+  .paste .actions-row{margin-top:var(--sp2)}
+  .paste .note{margin-top:var(--sp2)}
+  .paste .note b{color:var(--text)}
   .empty{color:var(--muted);font-size:var(--fs-sm);margin:var(--sp3) 0 0}
   .explain{color:var(--muted);font-size:var(--fs-xs);line-height:1.55;margin:var(--sp3) 0 0;
     padding-left:10px;border-left:2px solid var(--line)}
@@ -237,6 +250,14 @@
   .share-link{display:flex;gap:var(--sp2);flex-wrap:wrap;align-items:flex-end;margin-top:var(--sp3)}
   .share-link .grow{flex:1 1 240px}
   .share-link input{font-size:var(--fs-xs);color:var(--accent2)}
+  /* QR-код для входа в комнату */
+  .qrbox{display:flex;gap:var(--sp4);align-items:center;flex-wrap:wrap;margin-top:var(--sp4);
+    padding:var(--sp3);background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-md)}
+  .qr{width:190px;height:190px;flex:none;background:#fff;border-radius:var(--r-sm);padding:8px}
+  .qr svg{display:block;width:100%;height:100%}
+  .qr-cap{flex:1 1 220px;font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
+  .qr-cap b{color:var(--text)}
+  .qr-cap code{color:var(--accent);font-size:var(--fs-xs);word-break:break-all}
   .note{color:var(--muted);font-size:var(--fs-xs);margin:var(--sp3) 0 0;line-height:1.5}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
     background:var(--accent);color:var(--ink);font:600 var(--fs-md)/1.2 var(--font);
@@ -250,6 +271,8 @@
   .chk input{width:16px;height:16px;accent-color:var(--accent);margin:0;flex:none}
   td.pos{color:var(--live);font-weight:700}
   td.neg{color:var(--danger);font-weight:700}
+  .td-tag{margin-left:6px;font-size:var(--fs-cap);color:var(--muted);text-transform:none;letter-spacing:0}
+  .td-tag.sub{color:var(--live)}
   /* подвал */
   .foot{margin-top:var(--sp5);padding-top:var(--sp4);border-top:1px solid var(--line);
     display:flex;flex-direction:column;gap:6px;font-size:var(--fs-xs);color:var(--muted)}
@@ -324,13 +347,23 @@
     </div>
     <div class="chips" id="chips"></div>
 
+    <details class="paste no-print">
+      <summary>Вставить список игроков из сообщения</summary>
+      <textarea id="pasteBox" rows="4" placeholder="Вставьте сообщение как есть, например:&#10;Играем в 21:00, будут: 1. Анна, 2. Борис, 3. Вера&#10;Глеб+79161234567&#10;Дина, Егор и Жанна"></textarea>
+      <div class="actions-row">
+        <button class="primary" id="pasteAdd">Добавить найденных</button>
+        <button class="ghost" id="pasteReplace">Заменить состав</button>
+      </div>
+      <p class="note" id="pasteReport">Вставьте текст — приложение само выберет имена и покажет, что нашло.</p>
+    </details>
+
     <h2 style="margin-top:var(--sp5)">Сетка и время</h2>
-    <div class="fields">
+    <div class="fields" style="--cols:7">
       <div>
         <label for="courts">Кортов</label>
         <select id="courts"><option>1</option><option selected>2</option><option>3</option></select>
       </div>
-      <div>
+      <div class="wide">
         <label for="mode">Формат</label>
         <select id="mode">
           <option value="everyone" selected>Каждый с каждым</option>
@@ -352,7 +385,7 @@
         <label for="matchMin">Матч, мин</label>
         <input id="matchMin" type="number" min="5" max="180" step="5" value="30" inputmode="numeric">
       </div>
-      <div>
+      <div class="wide">
         <label for="startTime">Начало</label>
         <input id="startTime" type="time" value="18:00">
       </div>
@@ -456,6 +489,14 @@
         </div>
         <button class="ghost" id="copyLinkBtn">Копировать ссылку</button>
       </div>
+      <div class="qrbox" id="qrBox" hidden>
+        <div class="qr" id="qrCode"></div>
+        <div class="qr-cap">
+          <b>Наведите камеру телефона</b> — откроется это же приложение с кодом комнаты.
+          Ссылку можно показать или переслать.<br>
+          <span id="qrWhat"></span>
+        </div>
+      </div>
       <p class="note" id="syncStatus">Не подключено — приложение работает локально.</p>
       <div class="peers" id="peers"></div>
     </section>
@@ -486,12 +527,248 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* QR-код без библиотек: версии 1–6, уровни коррекции L и M, байтовый режим (UTF-8).
+   Этого хватает для ссылки-приглашения. Рисуется в SVG одним контуром. */
+const QRCode = (() => {
+  // уровень -> версия -> [ECC на блок, [[блоков, данных в блоке], ...]]
+  const EC = {
+    L: { 1:[7,[[1,19]]], 2:[10,[[1,34]]], 3:[15,[[1,55]]], 4:[20,[[1,80]]], 5:[26,[[1,108]]], 6:[18,[[2,68]]] },
+    M: { 1:[10,[[1,16]]], 2:[16,[[1,28]]], 3:[26,[[1,44]]], 4:[18,[[2,32]]], 5:[24,[[2,43]]], 6:[16,[[4,27]]] }
+  };
+  const ALIGN = { 1:[], 2:[6,18], 3:[6,22], 4:[6,26], 5:[6,30], 6:[6,34] };
+  const ECL = { L:1, M:0, Q:3, H:2 };
+
+  // арифметика GF(256)
+  const EXP = new Array(512), LOG = new Array(256);
+  (function () {
+    let x = 1;
+    for (let i = 0; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  })();
+  const mul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
+
+  function genPoly(n) {
+    let p = [1];
+    for (let i = 0; i < n; i++) {
+      const r = new Array(p.length + 1).fill(0);
+      for (let j = 0; j < p.length; j++) { r[j] ^= p[j]; r[j + 1] ^= mul(p[j], EXP[i]); }
+      p = r;
+    }
+    return p;
+  }
+  function rsEcc(data, n) {
+    const g = genPoly(n);
+    const res = data.concat(new Array(n).fill(0));
+    for (let i = 0; i < data.length; i++) {
+      const coef = res[i];
+      if (!coef) continue;
+      for (let j = 0; j < g.length; j++) res[i + j] ^= mul(g[j], coef);
+    }
+    return res.slice(data.length);
+  }
+
+  function utf8(str) {
+    const out = [];
+    for (const ch of unescape(encodeURIComponent(str))) out.push(ch.charCodeAt(0));
+    return out;
+  }
+  function versionFor(len, ecl) {
+    for (let v = 1; v <= 6; v++) {
+      const total = EC[ecl][v][1].reduce((s, [n, d]) => s + n * d, 0);
+      const header = 4 + 8;                          // режим + длина (версии 1–9)
+      if (len * 8 + header <= total * 8) return v;
+    }
+    return null;                                     // слишком длинная строка
+  }
+
+  function codewords(bytes, version, ecl) {
+    const [ecPer, groups] = EC[ecl][version];
+    const totalData = groups.reduce((s, [n, d]) => s + n * d, 0);
+    const bits = [];
+    const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+    push(4, 4);                                      // байтовый режим
+    push(bytes.length, 8);
+    bytes.forEach(b => push(b, 8));
+    for (let i = 0; i < 4 && bits.length < totalData * 8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0;
+      for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+      data.push(b);
+    }
+    let k = 0;
+    while (data.length < totalData) data.push(k++ % 2 ? 0x11 : 0xEC);
+
+    const blocks = [], eccs = [];
+    let pos = 0;
+    groups.forEach(([n, d]) => {
+      for (let i = 0; i < n; i++) {
+        const b = data.slice(pos, pos + d);
+        pos += d;
+        blocks.push(b);
+        eccs.push(rsEcc(b, ecPer));
+      }
+    });
+    const out = [];
+    const maxD = Math.max(...blocks.map(b => b.length));
+    for (let i = 0; i < maxD; i++) blocks.forEach(b => { if (i < b.length) out.push(b[i]); });
+    for (let i = 0; i < ecPer; i++) eccs.forEach(e => out.push(e[i]));
+    return out;
+  }
+
+  function maskAt(k, i, j) {
+    switch (k) {
+      case 0: return (i + j) % 2 === 0;
+      case 1: return i % 2 === 0;
+      case 2: return j % 3 === 0;
+      case 3: return (i + j) % 3 === 0;
+      case 4: return (((i / 2) | 0) + ((j / 3) | 0)) % 2 === 0;
+      case 5: return ((i * j) % 2 + (i * j) % 3) === 0;
+      case 6: return (((i * j) % 2 + (i * j) % 3) % 2) === 0;
+      default: return (((i + j) % 2 + (i * j) % 3) % 2) === 0;
+    }
+  }
+
+  function formatBits(ecl, mask) {
+    const data = (ECL[ecl] << 3) | mask;
+    let rem = data << 10;
+    for (let i = 14; i >= 10; i--) if ((rem >> i) & 1) rem ^= 0x537 << (i - 10);
+    return ((data << 10) | (rem & 0x3ff)) ^ 0x5412;
+  }
+
+  function build(version, ecl, cw, mask) {
+    const size = version * 4 + 17;
+    const m = Array.from({ length: size }, () => new Array(size).fill(0));
+    const fn = Array.from({ length: size }, () => new Array(size).fill(false));
+    const set = (r, c, v) => { m[r][c] = v; fn[r][c] = true; };
+
+    const finder = (r0, c0) => {
+      for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
+        const rr = r0 + r, cc = c0 + c;
+        if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+        const on = (r >= 0 && r <= 6 && (c === 0 || c === 6)) ||
+                   (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
+                   (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        set(rr, cc, on ? 1 : 0);
+      }
+    };
+    finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+
+    for (let i = 8; i < size - 8; i++) { set(6, i, i % 2 === 0 ? 1 : 0); set(i, 6, i % 2 === 0 ? 1 : 0); }
+
+    const ap = ALIGN[version];
+    ap.forEach(r0 => ap.forEach(c0 => {
+      if ((r0 === 6 && c0 === 6) || (r0 === 6 && c0 === size - 7) || (r0 === size - 7 && c0 === 6)) return;
+      for (let r = -2; r <= 2; r++) for (let c = -2; c <= 2; c++)
+        set(r0 + r, c0 + c, Math.max(Math.abs(r), Math.abs(c)) === 1 ? 0 : 1);
+    }));
+
+    set(size - 8, 8, 1);                              // тёмный модуль
+
+    // форматная информация — 15 бит, старший бит идёт первым
+    const fb = formatBits(ecl, mask);
+    const bitOf = i => (fb >> (14 - i)) & 1;
+    for (let i = 0; i <= 5; i++) set(8, i, bitOf(i));
+    set(8, 7, bitOf(6));
+    set(8, 8, bitOf(7));
+    set(7, 8, bitOf(8));
+    for (let i = 9; i <= 14; i++) set(14 - i, 8, bitOf(i));
+    for (let i = 0; i <= 6; i++) set(size - 1 - i, 8, bitOf(i));
+    for (let i = 7; i <= 14; i++) set(8, size - 15 + i, bitOf(i));
+
+    // данные «змейкой»
+    const total = cw.length * 8;
+    let bit = 0, up = true;
+    for (let col = size - 1; col > 0; col -= 2) {
+      if (col === 6) col--;
+      for (let k = 0; k < size; k++) {
+        const r = up ? size - 1 - k : k;
+        for (const c of [col, col - 1]) {
+          if (fn[r][c]) continue;
+          const v = bit < total ? (cw[bit >> 3] >> (7 - (bit & 7))) & 1 : 0;
+          m[r][c] = v;
+          bit++;
+        }
+      }
+      up = !up;
+    }
+
+    for (let r = 0; r < size; r++) for (let c = 0; c < size; c++)
+      if (!fn[r][c] && maskAt(mask, r, c)) m[r][c] ^= 1;
+
+    return { size, modules: m };
+  }
+
+  function penalty(m, size) {
+    let score = 0;
+    const runs = line => {
+      let s = 0, run = 1;
+      for (let i = 1; i < size; i++) {
+        if (line[i] === line[i - 1]) run++;
+        else { if (run >= 5) s += 3 + (run - 5); run = 1; }
+      }
+      if (run >= 5) s += 3 + (run - 5);
+      return s;
+    };
+    for (let i = 0; i < size; i++) { score += runs(m[i]); score += runs(m.map(r => r[i])); }
+    for (let r = 0; r < size - 1; r++) for (let c = 0; c < size - 1; c++)
+      if (m[r][c] === m[r][c + 1] && m[r][c] === m[r + 1][c] && m[r][c] === m[r + 1][c + 1]) score += 3;
+    const pat1 = [1,0,1,1,1,0,1,0,0,0,0], pat2 = [0,0,0,0,1,0,1,1,1,0,1];
+    const hasPat = line => {
+      let n = 0;
+      for (let i = 0; i + 11 <= size; i++) {
+        let ok1 = true, ok2 = true;
+        for (let k = 0; k < 11; k++) { if (line[i + k] !== pat1[k]) ok1 = false; if (line[i + k] !== pat2[k]) ok2 = false; }
+        if (ok1 || ok2) n++;
+      }
+      return n * 40;
+    };
+    for (let i = 0; i < size; i++) { score += hasPat(m[i]); score += hasPat(m.map(r => r[i])); }
+    let dark = 0;
+    for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) dark += m[r][c];
+    const pct = dark * 100 / (size * size);
+    score += Math.floor(Math.abs(pct - 50) / 5) * 10;
+    return score;
+  }
+
+  function matrix(text, ecl = 'M', forceMask = null) {
+    const bytes = utf8(text);
+    const version = versionFor(bytes.length, ecl);
+    if (!version) return null;                       // строка не влезает
+    const cw = codewords(bytes, version, ecl);
+    let best = null, bestScore = Infinity;
+    for (let mask = 0; mask < 8; mask++) {
+      if (forceMask != null && mask !== forceMask) continue;
+      const built = build(version, ecl, cw, mask);
+      const score = penalty(built.modules, built.size);
+      if (score < bestScore) { bestScore = score; best = { ...built, mask }; }
+    }
+    return best;
+  }
+
+  function svg(text, opts = {}) {
+    const r = matrix(text, opts.ecl || 'M', opts.mask);
+    if (!r) return '';
+    const q = opts.quiet == null ? 2 : opts.quiet;
+    const n = r.size + q * 2;
+    let path = '';
+    for (let y = 0; y < r.size; y++) for (let x = 0; x < r.size; x++)
+      if (r.modules[y][x]) path += `M${x + q} ${y + q}h1v1h-1z`;
+    return `<svg viewBox="0 0 ${n} ${n}" width="100%" height="100%" shape-rendering="crispEdges" role="img" aria-label="QR-код">
+      <rect width="${n}" height="${n}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
+  }
+
+  return { matrix, svg, versionFor: (t, e = 'M') => versionFor(utf8(t).length, e) };
+})();
+
 /* ================= константы и состояние ================= */
 const MAX_PLAYERS = 12, MAX_COURTS = 3;
 const LS = 'squash-grid-v2';
 const state = {
   players: [], courts: 2, rounds: 7, mode: 'everyone',
   matchMin: 30, sessionMin: 120, startTime: '', competitive: true,
+  past: {},                                  // index -> [{from, to, name}] — кто играл раньше
   schedule: [], scores: {}, structTs: 0, scoresTs: 0
 };
 // укажите адрес своего репозитория — он показывается в подвале страницы
@@ -600,6 +877,7 @@ function save(){
     players: state.players, courts: state.courts, rounds: state.rounds, mode: state.mode,
     matchMin: state.matchMin, sessionMin: state.sessionMin, startTime: state.startTime,
     competitive: state.competitive,
+    past: state.past,
     schedule: state.schedule, scores: state.scores, structTs: state.structTs, scoresTs: state.scoresTs,
     room: sync.room, role: sync.role, name: sync.name, server: sync.server, view: judge.view
   })); }catch(e){}
@@ -617,6 +895,7 @@ function load(){
     if(d.startTime) state.startTime = d.startTime;
     if(Array.isArray(d.schedule)) state.schedule = d.schedule;
     if(d.scores) state.scores = d.scores;
+    if(d.past) state.past = d.past;
     state.structTs = d.structTs || 0; state.scoresTs = d.scoresTs || 0;
     sync.room = d.room || ''; sync.role = d.role || 'judge'; sync.name = d.name || '';
     if(d.server) sync.server = d.server;
@@ -915,13 +1194,27 @@ function flushNow(){                       // при уходе со стран�
 function publishFull(){
   state.structTs = Date.now();
   queueMsg({ t:'full', from: sync.clientId, nm: sync.name, ts: state.structTs, p: state.players,
-             k: state.courts, n: state.rounds, m: state.mode,
+             k: state.courts, n: state.rounds, m: state.mode, past: state.past,
              c: state.schedule.map(r=>r.courts), r: state.schedule.map(r=>r.resting) });
 }
 function publishScore(g){
   const s = state.scores[g]; if(!s) return;
   queueMsg({ t:'score', from: sync.clientId, nm: sync.name, g, a: s.a ?? null, b: s.b ?? null,
              ts: s.ts || Date.now(), sv: s.sv || null, log: s.log || null, end: s.end || null });
+}
+// первичная передача всего счёта новому судье: без истории очков, чтобы влезть в лимит сообщения
+function publishAllScores(){
+  let queued = 0;
+  state.schedule.forEach((r, ri) => r.courts.forEach((m, ci) => {
+    if(!m) return;
+    const g = gid(ri, ci), s = state.scores[g];
+    if(!s) return;
+    queueMsg({ t:'score', from: sync.clientId, nm: sync.name, g, a: s.a ?? null, b: s.b ?? null,
+               ts: s.ts || Date.now(), sv: s.sv || null, end: s.end || null });
+    queued++;
+    if(queued % 40 === 0) flush();          // крупные турниры уходят несколькими сообщениями
+  }));
+  return queued;
 }
 
 /* --- приём: поток SSE, при проблемах — редкий опрос --- */
@@ -1003,7 +1296,10 @@ function applyRemote(m, timeMs){
   if(m.t === 'hello'){
     if(fresh){
       queueMsg({ t:'ping', from: sync.clientId, nm: sync.name, role: sync.role });
-      if(sync.role === 'owner' && state.schedule.length) publishFull();
+      if(sync.role === 'owner' && state.schedule.length){
+        publishFull();
+        publishAllScores();                 // новый судья получает и уже внесённый счёт
+      }
     }
     renderShare();
     return;
@@ -1016,6 +1312,7 @@ function applyRemote(m, timeMs){
     state.courts = Math.min(m.k || 2, MAX_COURTS);
     state.rounds = m.n || state.rounds;
     state.mode = m.m || state.mode;
+    state.past = m.past || {};
     state.schedule = (m.c || []).map((ms, i) => ({ courts: ms, resting: (m.r && m.r[i]) || [] }));
     save(); renderAll(); renderSetupValues();
     toast('Сетка обновлена другим судьёй');
@@ -1048,12 +1345,15 @@ function connect(room, role, name, server){
   sync.room = room; sync.role = role || 'judge'; sync.name = name || '';
   sync.server = (server || sync.server || DEFAULT_SERVER);
   sync.on = true; sync.lastId = ''; sync.peers = {}; sync.errors = 0; sync.joinedAt = Date.now();
-  location.hash = 'room=' + room;
+  location.hash = shareHash();
   save(); renderShare(); renderGrid(); renderJudge(); renderBanner();
   openStream();                                          // сначала слушаем (since=all подхватит историю)
   queueMsg({ t:'hello', from: sync.clientId, nm: sync.name, role: sync.role });
   flush();
-  if(sync.role === 'owner' && state.schedule.length) publishFull();
+  if(sync.role === 'owner' && state.schedule.length){
+    publishFull();
+    publishAllScores();
+  }
   renderSetupValues();
   toast('Комната ' + room);
 }
@@ -1098,8 +1398,15 @@ function renderPlayers(){
     box.innerHTML = '<span class="empty">Пока никого нет. Добавьте игроков (2–12).</span>';
     return;
   }
-  box.innerHTML = state.players.map((p,i) =>
-    `<span class="chip"><b>${esc(p)}</b><button data-del="${i}" title="Удалить">×</button></span>`).join('');
+  box.innerHTML = state.players.map((p,i) => {
+    const prev = ((state.past && state.past[i]) || []).map(s => s.name).filter(Boolean);
+    const hist = prev.length
+      ? `<span class="chip-hist" title="Раньше в этом слоте играл(а): ${esc(prev.join(', '))}">⟲ ${prev.length}</span>` : '';
+    return `<span class="chip"><b>${esc(p)}</b>${hist}
+      <button data-edit="${i}" title="Заменить игрока — сетка и счёт сохранятся">✎</button>
+      <button data-del="${i}" title="Убрать из состава">×</button></span>`;
+  }).join('');
+  box.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => replacePlayer(+b.dataset.edit));
   box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if(!canEditAll()) return toast('Ваша роль — только просмотр');
     if(!confirmWipe('Убрать игрока и построить сетку заново? Внесённый счёт будет потерян.')) return;
@@ -1172,7 +1479,7 @@ function renderGrid(){
         const g0 = gid(ri, ci), s0 = state.scores[g0] || {};
         const done0 = s0.a != null && s0.b != null;
         return `<div class="court history">
-          <div class="court-title">Сыграно · ${esc(state.players[m[0]])} — ${esc(state.players[m[1]])}</div>
+          <div class="court-title">Сыграно · ${esc(nameAt(m[0], ri))} — ${esc(nameAt(m[1], ri))}</div>
           <div class="hist">${done0 ? s0.a + ' : ' + s0.b : 'счёт не внесён'}</div>
         </div>`;
       }
@@ -1186,19 +1493,19 @@ function renderGrid(){
         <div class="court-title"><span class="grip" title="Перетащите, чтобы перенести игру">⠿</span>Корт ${ci+1}
           ${onAir ? '<span class="air" style="margin-left:auto">в эфире</span>' : ''}</div>
         <div class="game">
-          <div class="team ${w1?'win':''}">${esc(state.players[a])}</div>
+          <div class="team ${w1?'win':''}">${esc(nameAt(a, ri))}</div>
           <div class="vs">VS</div>
-          <div class="team ${w2?'win':''}">${esc(state.players[b])}</div>
+          <div class="team ${w2?'win':''}">${esc(nameAt(b, ri))}</div>
         </div>
         <div class="score">
           <input type="number" min="0" max="99" inputmode="numeric" ${lock?'disabled':''} data-game="${g}" data-team="a" value="${s.a ?? ''}" placeholder="—">
           <input type="number" min="0" max="99" inputmode="numeric" ${lock?'disabled':''} data-game="${g}" data-team="b" value="${s.b ?? ''}" placeholder="—">
         </div>
-        ${ended ? `<div class="fin">завершён судьёй · ${ENDREASON[s.end.reason] || ''} · победа ${esc(state.players[winner === 'a' ? a : b])}</div>` : ''}
+        ${ended ? `<div class="fin">завершён судьёй · ${ENDREASON[s.end.reason] || ''} · победа ${esc(nameAt(winner === 'a' ? a : b, ri))}</div>` : ''}
       </div>`;
     }).join('');
     const rest = round.resting.length
-      ? `<span class="rest">Отдыхают: ${round.resting.map(i => esc(state.players[i])).join(', ')}</span>` : '';
+      ? `<span class="rest">Отдыхают: ${round.resting.map(i => esc(nameAt(i, ri))).join(', ')}</span>` : '';
     const t = waveWindow(ri);
     return `<section class="round" data-slot="${ri}"><header>
       <h3><span class="idx">${roundTitle(ri)}</span>${t.text}</h3>
@@ -1281,7 +1588,8 @@ function playerOf(g, team){
   const [ri, ci] = g.split('-').map(Number);
   const r = state.schedule[ri];
   if(!r || !r.courts[ci]) return '';
-  return state.players[team === 'a' ? r.courts[ci][0] : r.courts[ci][1]] || '';
+  const idx = team === 'a' ? r.courts[ci][0] : r.courts[ci][1];
+  return nameAt(idx, ri) || '';
 }
 
 /* ================= перенос матчей по времени =================
@@ -1435,7 +1743,7 @@ function renderJudge(){
         <button class="ball" data-serve="${team}" ${lock?'disabled':''}
           title="${serving ? 'Подаёт' : 'Передать подачу'}"><i></i></button>
         <div class="who">
-          <span class="nm">${esc(state.players[idx])}</span>
+          <span class="nm">${esc(nameAt(idx, judge.round))}</span>
           ${serving ? `<span class="tag srv">подаёт</span>${boxTag(box, lock)}` : ''}
           ${isWin ? '<span class="tag win">победа</span>' : ''}
         </div>
@@ -1448,7 +1756,7 @@ function renderJudge(){
     };
 
     const others = rnd.courts.map(([a,b],i) => i===ci ? '' :
-      `Корт ${i+1}: ${esc(state.players[a])} — ${esc(state.players[b])}`).filter(Boolean).join(' · ');
+      `Корт ${i+1}: ${esc(nameAt(a, judge.round))} — ${esc(nameAt(b, judge.round))}`).filter(Boolean).join(' · ');
     const ended = s.end && s.end.winner;
     const decisionRow = `<div class="decide no-print">
       <span class="decide-cap">Решение</span>
@@ -1457,24 +1765,24 @@ function renderJudge(){
       <button class="ghost mini" data-dec="n" ${lock?'disabled':''}
         title="No let — отказ, игра продолжается">No let</button>
       <button class="ghost mini" data-dec="s" data-dec-who="a" ${lock?'disabled':''}
-        title="Stroke — очко в пользу игрока (помешали в розыгрыше)">Stroke → ${esc(state.players[m[0]])}</button>
+        title="Stroke — очко в пользу игрока (помешали в розыгрыше)">Stroke → ${esc(nameAt(m[0], judge.round))}</button>
       <button class="ghost mini" data-dec="s" data-dec-who="b" ${lock?'disabled':''}
-        title="Stroke — очко в пользу игрока (помешали в розыгрыше)">Stroke → ${esc(state.players[m[1]])}</button>
+        title="Stroke — очко в пользу игрока (помешали в розыгрыше)">Stroke → ${esc(nameAt(m[1], judge.round))}</button>
     </div>`;
     const finishBlock = `<details class="finish no-print" ${ended ? 'open' : ''}>
       <summary>Поведение и досрочное завершение${ended ? ' · матч завершён' : ''}</summary>
       <div class="jactions">
         <span class="decide-cap">Предупреждение за поведение:</span>
-        <button class="ghost mini" data-dec="w" data-dec-who="a" ${lock?'disabled':''}>⚠ ${esc(state.players[m[0]])}</button>
-        <button class="ghost mini" data-dec="w" data-dec-who="b" ${lock?'disabled':''}>⚠ ${esc(state.players[m[1]])}</button>
+        <button class="ghost mini" data-dec="w" data-dec-who="a" ${lock?'disabled':''}>⚠ ${esc(nameAt(m[0], judge.round))}</button>
+        <button class="ghost mini" data-dec="w" data-dec-who="b" ${lock?'disabled':''}>⚠ ${esc(nameAt(m[1], judge.round))}</button>
       </div>
       <div class="jactions">
         <span class="decide-cap">Завершить досрочно (травма, поведение, неявка):</span>
         <select class="mini" id="endReason" ${lock?'disabled':''}>
           ${Object.entries(ENDREASON).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}
         </select>
-        <button class="ghost mini" data-finish="a" ${lock?'disabled':''}>Победа ${esc(state.players[m[0]])}</button>
-        <button class="ghost mini" data-finish="b" ${lock?'disabled':''}>Победа ${esc(state.players[m[1]])}</button>
+        <button class="ghost mini" data-finish="a" ${lock?'disabled':''}>Победа ${esc(nameAt(m[0], judge.round))}</button>
+        <button class="ghost mini" data-finish="b" ${lock?'disabled':''}>Победа ${esc(nameAt(m[1], judge.round))}</button>
         ${ended ? '<button class="ghost mini" data-undo-end="1">Отменить завершение</button>' : ''}
       </div>
       <p class="note">По правилам судья может завершить матч: травма или отказ продолжать, неявка,
@@ -1528,7 +1836,7 @@ function renderJudge(){
       ? `<span class="rest"> · подача: ${esc(playerOf(gg, serveOf(gg).server))}, ${boxOf(gg) ? boxName(boxOf(gg)) : 'квадрат выбирает'}</span>` : '';
     return `<div class="jitem ${ri===judge.round?'now':''} ${air?'on-air':''}" data-goto="${ri}">
       <span class="l"><span class="tag">${tag}</span>
-        <span class="who">${esc(state.players[a])} — ${esc(state.players[b])}${srv}</span></span>
+        <span class="who">${esc(nameAt(a, ri))} — ${esc(nameAt(b, ri))}${srv}</span></span>
       <span class="r">${air ? '<span class="air">в эфире</span>' : ''}
         <span class="sc ${won?'done':''}">${s.a != null || s.b != null ? (s.a ?? 0)+' : '+(s.b ?? 0) : '—'}</span></span>
     </div>`;
@@ -1654,7 +1962,7 @@ function suggestHTML(lock){
     </div>`;
   return `<div class="suggest no-print">
     <div class="sug-head">Предлагаю выпустить</div>
-    <div class="sug-pair">${esc(state.players[s.m[0]])} — ${esc(state.players[s.m[1]])}</div>
+    <div class="sug-pair">${esc(nameAt(s.m[0], s.r))} — ${esc(nameAt(s.m[1], s.r))}</div>
     <div class="sug-note">${esc(s.note)}</div>
     <div class="jactions">
       <button class="primary" data-suggest-ok="1">Поставить на этот корт</button>
@@ -1667,37 +1975,78 @@ function suggestHTML(lock){
 function renderTable(){
   const progress = state.mode === 'everyone';
   $('thProg').textContent = progress ? 'Прогресс' : '';
-  const stats = state.players.map((name,i) => ({ name, i, p:0, w:0, l:0, sf:0, sa:0 }));
+  // считаем по именам: у слота с заменой может быть два разных игрока
+  const stats = new Map();
+  const get = name => {
+    if(!stats.has(name)) stats.set(name, { name, p:0, w:0, l:0, sf:0, sa:0, total:0 });
+    return stats.get(name);
+  };
   state.schedule.forEach((round, ri) => round.courts.forEach(([a,b], ci) => {
-    const g = gid(ri,ci);
-    const w = matchResult(g);
-    if(!w) return;                                  // партия идёт — в зачёт не идёт
-    const s = state.scores[g] || {};
-    const add = (idx, own, opp, won) => {
-      const st = stats[idx];
-      st.p++; st.sf += own; st.sa += opp; won ? st.w++ : st.l++;
-    };
-    add(a, +s.a || 0, +s.b || 0, w === 'a');
-    add(b, +s.b || 0, +s.a || 0, w === 'b');
+    const g = gid(ri,ci), w = matchResult(g), s = state.scores[g] || {};
+    const A = get(nameAt(a, ri)), B = get(nameAt(b, ri));
+    A.total++; B.total++;
+    if(!w) return;                                 // партия идёт — в зачёт не идёт
+    A.p++; B.p++;
+    A.sf += +s.a || 0; A.sa += +s.b || 0;
+    B.sf += +s.b || 0; B.sa += +s.a || 0;
+    if(w === 'a'){ A.w++; B.l++; } else { B.w++; A.l++; }
   }));
-  // соревновательный режим: победы, затем разница очков; иначе — по забитым
-  stats.sort(state.competitive
+  const rows = [...stats.values()];
+  rows.sort(state.competitive
     ? (a,b) => b.w - a.w || (b.sf - b.sa) - (a.sf - a.sa) || b.sf - a.sf || a.name.localeCompare(b.name)
     : (a,b) => b.w - a.w || b.sf - a.sf || a.name.localeCompare(b.name));
-  $('standings').innerHTML = stats.map((s,i) => {
-    const pc = state.schedule.reduce((acc,r) => acc + r.courts.filter(([a,b]) => a===s.i||b===s.i).length, 0);
+  // пометки: кто вышел на замену и кто уже не играет
+  const current = new Set(state.players);
+  const subs = new Set(), gone = new Set();
+  Object.keys(state.past || {}).forEach(k => {
+    subs.add(state.players[+k]);
+    state.past[k].forEach(seg => gone.add(seg.name));
+  });
+  $('standings').innerHTML = rows.map((s,i) => {
     const diff = s.sf - s.sa;
     const cls = diff > 0 ? 'pos' : diff < 0 ? 'neg' : '';
-    return `<tr><td>${i+1}</td><td>${esc(s.name)}</td>
+    const tag = (gone.has(s.name) && !current.has(s.name)) ? '<span class="td-tag">до замены</span>'
+              : subs.has(s.name) ? '<span class="td-tag sub">замена</span>' : '';
+    return `<tr><td>${i+1}</td><td>${esc(s.name)}${tag}</td>
       <td class="num">${s.p}</td><td class="num">${s.w}</td><td class="num">${s.l}</td>
       <td class="num">${s.sf}</td><td class="num">${s.sa}</td>
       <td class="num ${cls}">${diff > 0 ? '+' : ''}${diff}</td>
-      <td class="num">${progress && pc ? s.p + '/' + pc : ''}</td></tr>`;
+      <td class="num">${progress && s.total ? s.p + '/' + s.total : ''}</td></tr>`;
   }).join('');
   $('competitive').checked = !!state.competitive;
 }
 
 /* ================= рендер: общий доступ ================= */
+// ссылка-приглашение: комната и (если задан) свой адрес сервера
+function shareHash(){
+  const p = new URLSearchParams();
+  if(sync.room) p.set('room', sync.room);
+  if(sync.server && sync.server !== DEFAULT_SERVER) p.set('s', sync.server);
+  return p.toString();
+}
+function shareUrl(){ return location.href.split('#')[0] + '#' + shareHash(); }
+
+let lastQrUrl = '';
+function renderQR(){
+  const box = $('qrBox');
+  if(!sync.on){ box.hidden = true; return; }
+  const url = shareUrl();
+  box.hidden = false;
+  if(url === lastQrUrl) return;                 // не перерисовываем зря
+  lastQrUrl = url;
+  const svg = QRCode.svg(url, { ecl: 'M' });
+  if(!svg){                                     // ссылка длиннее, чем влезает в QR
+    $('qrCode').innerHTML = '';
+    $('qrWhat').textContent = 'Ссылка слишком длинная для QR — передайте её текстом.';
+    return;
+  }
+  $('qrCode').innerHTML = svg;
+  const custom = sync.server && sync.server !== DEFAULT_SERVER;
+  $('qrWhat').textContent = custom
+    ? 'В ссылке зашит и код комнаты, и адрес сервера: ' + sync.server
+    : 'Ссылка ведёт на эту страницу, код комнаты — внутри.';
+}
+
 function renderShare(){
   const badge = $('syncBadge');
   const n = Object.keys(sync.peers).length + (sync.on ? 1 : 0);
@@ -1709,10 +2058,9 @@ function renderShare(){
 
   $('linkBox').hidden = !sync.on;
   if(sync.on){
-    $('shareLink').value = location.origin === 'null'
-      ? location.href.split('#')[0] + '#room=' + sync.room
-      : location.origin + location.pathname + '#room=' + sync.room;
+    $('shareLink').value = shareUrl();
   }
+  renderQR();
   $('disconnectBtn').disabled = !sync.on;
   const roleTxt = { owner:'организатор', judge:'судья', viewer:'зритель' }[sync.role] || sync.role;
   const st = {
@@ -1741,7 +2089,8 @@ function renderAll(){ renderPlayers(); renderGrid(); renderTable(); renderJudge(
 
 /* ================= действия ================= */
 function resetSchedule(){
-  state.schedule = []; state.scores = {}; state.structTs = Date.now(); state.scoresTs = Date.now();
+  state.schedule = []; state.scores = {}; state.past = {};
+  state.structTs = Date.now(); state.scoresTs = Date.now();
   $('panel-grid').innerHTML = ''; staleOff(); updateGenBtn();
   renderSummary(); renderJudge(); renderTable();
 }
@@ -1816,6 +2165,181 @@ function addPlayer(){
     publishFull();
   }
   renderSummary();
+}
+/* ================= разбор списка игроков из текста =================
+   Организатор вставляет сообщение как есть: с нумерацией, телефонами,
+   ссылками, эмодзи и служебными словами. Приложение осторожно вытаскивает
+   имена: если слово похоже на служебное — лучше пропустить, чем добавить.  */
+const PASTE_STOP = new Set((
+  'игра играем играют играл играет идёт идет идти пойду приду буду будут будет есть да нет ок окей ' +
+  'плюс минус может наверное точно кто что как где когда почему зачем сколько который которая ' +
+  'сегодня завтра вчера вечером утром днем днём ночью срочно важно надо нужно можно нельзя ' +
+  'сбор сборы тренировка тренировки тренировке сквош корт корты корта зал время место адрес ' +
+  'цена стоимость рублей руб рубля оплата оплатить взнос деньги запись список состав участники ' +
+  'итого всего ссылка правила форма фото видео файл чат группа счёт счет ракетка мяч раздевалка душ ' +
+  'уровень новичок ещё еще тоже также только если чтобы или но а и в во на с со к ко у за по от до ' +
+  'из о об при для без над под про через между это этот эта эти там тут здесь вы вас нам вам меня ' +
+  'тебя нас них он она они мы я ты мой моя наш ваш свой все всё никто ничего сейчас уже пока ' +
+  'всем привет здравствуйте добрый день вечер утро спасибо пожалуйста забронирован забронировано ' +
+  'забронировал записывайтесь записываемся пишите напишите отпишитесь приходите жду ждём ждем ' +
+  'будем идем идём свободно занято оплатил напомню напоминаю уточните смотрите гляньте ' +
+  'не ни знаю думаю хочу могу смогу приеду уеду успею опоздаю скажу напишу уточню гляну ' +
+  'посмотрю узнаю поищу забронирую оплачу скину пришлю ' +
+  'ok yes no hi hello and the at in on'
+).split(' ').filter(Boolean));
+
+// слово похоже на имя: 3–11 букв, дефис или апостроф, не служебное и не глагол
+const verbLike = w => /(ться|шь|йте|ите|ать|ять|ешь|ишь|лся|лась|лось|ован|ирован|ано|ено|ились|ались|аю|яю|ую)$/i.test(w);
+const nameLike = w =>
+  /^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё'’\-]{2,10}$/.test(w) && !PASTE_STOP.has(w.toLowerCase()) && !verbLike(w);
+// служебным считаем и совсем короткие слова — имена короче трёх букв почти не встречаются
+const stopLike = w => PASTE_STOP.has(w.toLowerCase()) || verbLike(w) || w.length < 3;
+
+function tidyName(s){
+  return s.split(' ').map(w => {
+    if (w.length < 2) return w;
+    const lower = w === w.toLowerCase(), upper = w === w.toUpperCase();
+    return (lower || upper) ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w;
+  }).join(' ');
+}
+
+function extractPlayers(text){
+  let t = String(text);
+  t = t.replace(/https?:\/\/\S+/gi, ' ')                 // ссылки целиком
+       .replace(/www\.\S+/gi, ' ')
+       .replace(/@[A-Za-z0-9_.]+/g, ' ')                 // упоминания
+       .replace(/\d+\s*(руб\w*|₽|р\.)/gi, ' ')           // цены
+       .replace(/(\+?\d[\d\s\-()]{6,}\d)/g, ' ');        // телефоны
+
+  const names = [], skipped = [], seen = new Set();
+  for (const raw of t.split(/[\n,;•·|\t]+|\s+и\s+/gi)) {
+    let s = raw.trim();
+    if (!s) continue;
+    s = s.replace(/\([^)]*\)/g, ' ')
+         .replace(/^[\s\-–—•*·>«»"':]+/, '')
+         .replace(/^(будут|буду|играют|играем|состав|участники|запись|список|сбор)\s*[:\-–—]?\s*/i, '')
+         .replace(/\d/g, ' ')                            // номера, время, счёт
+         .replace(/[^A-Za-zА-Яа-яЁё\s'’\-]/g, ' ')       // прочие знаки и эмодзи
+         .replace(/\s+/g, ' ')
+         .trim();
+    if (!s) continue;
+
+    const words = s.split(' ').filter(Boolean);
+    const good = words.filter(nameLike);
+    const other = words.filter(w => !nameLike(w) && !stopLike(w));
+    let picked = [];
+    if (!other.length && good.length) {
+      // 1–2 слова без служебных — считаем это одним именем («Анна Петрова»)
+      if (good.length <= 2 && !words.some(stopLike)) picked = [good.join(' ')];
+      else picked = good;                               // иначе это перечисление
+    }
+    if (!picked.length) { skipped.push(raw.trim()); continue; }
+    picked.forEach(n => {
+      const name = tidyName(n).slice(0, 24);
+      const k = name.toLowerCase();
+      if (k.length < 2 || seen.has(k)) return;
+      seen.add(k);
+      names.push(name);
+    });
+  }
+  return { names, skipped };
+}
+
+function pasteNames(){
+  const el = $('pasteBox');
+  return el ? extractPlayers(el.value) : { names: [], skipped: [] };
+}
+function renderPasteReport(pick){
+  const el = $('pasteReport');
+  if (!el) return;
+  const text = $('pasteBox').value.trim();
+  if (!text) { el.innerHTML = 'Вставьте текст — приложение само выберет имена и покажет, что нашло.'; return; }
+  const { names, skipped } = extractPlayers(text);
+  if (!names.length) {
+    el.innerHTML = '<b>Имена не найдены.</b> Похоже, в тексте только служебные слова или ссылки.';
+    return;
+  }
+  const free = MAX_PLAYERS - state.players.length;
+  const take = pick ? names.slice(0, Math.max(0, free)) : names;
+  const list = take.map(n => '<b>' + esc(n) + '</b>').join(', ');
+  const over = pick && names.length > take.length
+    ? ` Влезает только ${free} из ${names.length} — лимит ${MAX_PLAYERS} игроков.` : '';
+  const skip = skipped.length
+    ? `<br>Пропущено: <code>${skipped.slice(0, 4).map(esc).join('</code>, <code>')}${skipped.length > 4 ? '…' : ''}</code>`
+    : '';
+  el.innerHTML = `Найдено ${names.length}: ${list}.${over}${skip}`;
+}
+function pasteInto(replace){
+  if (!canEditAll()) return toast('Ваша роль не позволяет менять состав');
+  const { names } = pasteNames();
+  if (!names.length) return toast('В тексте не нашлось имён');
+  if (replace && !confirm('Заменить состав на найденных?' + (state.schedule.length ? '\nСетка и счёт будут потеряны.' : ''))) return;
+  const roster = replace ? [] : state.players.slice();
+  if (replace) { state.players = []; resetSchedule(); }
+  let added = 0, dup = 0, full = 0;
+  names.forEach(n => {
+    if (state.players.length >= MAX_PLAYERS) { full++; return; }
+    if (state.players.some(p => p.toLowerCase() === n.toLowerCase())) { dup++; return; }
+    state.players.push(n); added++;
+  });
+  renderPlayers(); save();
+  if (state.schedule.length) publishFull(); else publishFull();
+  renderSetupValues();
+  const extra = [dup ? `повторы: ${dup}` : '', full ? `не влезло: ${full}` : ''].filter(Boolean).join(', ');
+  toast(`Добавлено: ${added}${extra ? ' · ' + extra : ''}`);
+  $('pasteBox').value = '';
+  if(added) $('pasteReport').innerHTML = `Добавлено в состав: <b>${added}</b>${extra ? ' · ' + extra : ''}`;
+  else renderPasteReport(false);
+}
+
+/* ================= замена игрока во время турнира =================
+   Сыгранные матчи остаются за тем, кто реально играл: у слота хранится
+   история имён. Текущее имя показывается в матчах, которые ещё не сыграны,
+   а прошедшие остаются за прежним игроком (он помечен «до замены»).      */
+function nameAt(i, ri){
+  const segs = state.past && state.past[i];
+  if(segs) for(const s of segs) if(ri >= s.from && ri < s.to) return s.name;
+  return state.players[i];
+}
+// с какой записи заменяем: первый матч игрока, который ещё не доигран
+function handoverSlot(i){
+  for(let ri = 0; ri < state.schedule.length; ri++){
+    const ci = state.schedule[ri].courts.findIndex(m => m && (m[0] === i || m[1] === i));
+    if(ci >= 0 && !isDone(gid(ri, ci))) return ri;
+  }
+  return state.schedule.length;
+}
+function substitutePlayer(i, newName){
+  const S = handoverSlot(i);
+  // история нужна, только если за этим игроком есть уже сыгранные матчи
+  const playedBefore = state.schedule.slice(0, S)
+    .some(r => r.courts.some(m => m && (m[0] === i || m[1] === i)));
+  if(S > 0 && playedBefore){
+    const segs = (state.past && state.past[i]) ? state.past[i].slice() : [];
+    const last = segs.length ? segs[segs.length - 1].to : 0;
+    if(S > last) segs.push({ from: last, to: S, name: state.players[i] });
+    state.past = state.past || {};
+    state.past[i] = segs;
+  }
+  const old = state.players[i];
+  state.players[i] = newName;
+  return { old, from: S, kept: playedBefore };
+}
+function replacePlayer(i){
+  if (!canEditAll()) return toast('Ваша роль не позволяет менять состав');
+  const cur = state.players[i];
+  const name = prompt(`Кто играет вместо «${cur}»?\n\nСыгранные матчи останутся за прежним игроком, ` +
+                      `а начиная со следующего несыгранного будет играть новый.`, '');
+  if (name === null) return;
+  const v = name.trim().replace(/\s+/g, ' ').slice(0, 24);
+  if (!v) return;
+  if (state.players.some((p, k) => k !== i && p.toLowerCase() === v.toLowerCase()))
+    return toast('Такой игрок уже есть в составе');
+  const { old, from, kept } = substitutePlayer(i, v);
+  state.structTs = Date.now();
+  save(); renderPlayers(); renderGrid(); renderTable(); renderJudge(); renderSummary();
+  publishFull();
+  toast(`Теперь «${v}» вместо «${old}».${kept ? ` Сыгранные матчи остались за «${old}».` : ''}`);
 }
 /* ================= защита сетки ================= */
 function staleOn(msg){
@@ -1900,11 +2424,11 @@ function scheduleText(){
     const t = waveWindow(ri);
     const lines = round.courts.map(([a,b], ci) => {
       const s = state.scores[gid(ri,ci)] || {};
-      const sv = s.sv ? `   [подача: ${state.players[sv.server === 'a' ? a : b]}, ${sv.box === 'left' ? 'левый' : 'правый'}]` : '';
+      const sv = s.sv ? `   [подача: ${nameAt(sv.server === 'a' ? a : b, ri)}, ${sv.box === 'left' ? 'левый' : 'правый'}]` : '';
       const res = (s.a != null && s.b != null) ? `   → ${s.a} : ${s.b}` : '';
-      return `  Корт ${ci+1}: ${state.players[a]}  vs  ${state.players[b]}${res}${sv}`;
+      return `  Корт ${ci+1}: ${nameAt(a, ri)}  vs  ${nameAt(b, ri)}${res}${sv}`;
     });
-    const rest = round.resting.length ? `\n  Отдыхают: ${round.resting.map(i => state.players[i]).join(', ')}` : '';
+    const rest = round.resting.length ? `\n  Отдыхают: ${round.resting.map(i => nameAt(i, ri)).join(', ')}` : '';
     return `${roundTitle(ri)} (${t.text}):\n${lines.join('\n')}${rest}`;
   }).join('\n\n');
   return head + '\n\n' + body;
@@ -1913,6 +2437,9 @@ function scheduleText(){
 /* ================= события ================= */
 $('addBtn').onclick = addPlayer;
 $('name').onkeydown = e => { if(e.key === 'Enter') addPlayer(); };
+$('pasteBox').oninput = () => renderPasteReport(false);
+$('pasteAdd').onclick = () => pasteInto(false);
+$('pasteReplace').onclick = () => pasteInto(true);
 $('genBtn').onclick = generate;
 $('clearBtn').onclick = () => {
   if(!canEditAll()) return toast('Ваша роль не позволяет менять состав');
@@ -2064,7 +2591,11 @@ $('importFile').onchange = e => {
 
 /* ================= старт ================= */
 load();
-if(location.hash.startsWith('#room=')) sync.room = location.hash.slice(6).toUpperCase();
+if(location.hash.length > 1){
+  const hp = new URLSearchParams(location.hash.slice(1));
+  if(hp.get('room')) sync.room = hp.get('room').toUpperCase();
+  if(hp.get('s')) sync.server = hp.get('s');           // адрес сервера из ссылки-приглашения
+}
 
 (function init(){
   if(!state.startTime){                       // по умолчанию — ближайшие 5 минут
